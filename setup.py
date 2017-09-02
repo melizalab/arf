@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # -*- mode: python -*-
-import sys, os
+import sys
+import os
 
 if sys.hexversion < 0x02060000:
     raise RuntimeError("Python 2.6 or higher required")
@@ -42,9 +43,8 @@ Supported data types include sampled data and event data (i.e. spike times).
 Requires h5py (at least 2.2) and numpy (at least 1.3).
 """
 
-install_requires=[]
-if os.environ.get('TRAVIS') == 'true' and \
-    os.environ.get('TRAVIS_PYTHON_VERSION').startswith('2.6'):
+install_requires = ["numpy>=1.3", "h5py>=2.2"]
+if (os.environ.get('TRAVIS') == 'true' and os.environ.get('TRAVIS_PYTHON_VERSION').startswith('2.6')):
     install_requires.append('unittest2>=0.5.1')
 
 setup(
@@ -54,11 +54,9 @@ setup(
     long_description=long_desc,
     classifiers=[x for x in cls_txt.split("\n") if x],
     author='Dan Meliza',
-    author_email='"dan" at the domain "meliza.org"',
     maintainer='Dan Meliza',
-    maintainer_email='"dan" at the domain "meliza.org"',
     url="https://github.com/melizalab/arf",
-    download_url="https://github.com/melizalab/arf/downloads",
+    download_url="https://github.com/melizalab/arf/archive/%s.tar.gz" % VERSION,
     install_requires=install_requires,
 
     py_modules=['arf'],
