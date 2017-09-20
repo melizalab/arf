@@ -1,16 +1,16 @@
 sudo: false
 language: python
 python:
-  # - "2.6"
+  - "2.6"
   - "2.7"
-  # - "3.2"
-  # - "3.3"
-  # - "3.4"
-  # - "3.5"
-  # - "3.6"
-# compiler:
-#   - gcc
-#   - clang
+  - "3.2"
+  - "3.3"
+  - "3.4"
+  - "3.5"
+  - "3.6"
+compiler:
+  - gcc
+  - clang
 addons:
   apt:
     packages:
@@ -20,6 +20,6 @@ install:
   - pip install -r requirements.txt
 # command to run tests
 script:
-  # - make test
-  # - tests/test_arf
+  - make test
+  - tests/test_arf
   - python setup.py test
