@@ -1,7 +1,7 @@
 ## arf
 
-The Advanced Recording Format (**ARF**) is an open standard for storing data from
-neuronal and behavioral experiments in a portable, high-performance, archival
+The Advanced Recording Format [ARF](See https://meliza.org/specifications/arf/) is an open standard for storing data from
+neuronal, acoustic, and behavioral experiments in a portable, high-performance, archival
 format. The goal is to enable labs to share data and tools, and to allow
 valuable data to be accessed and analyzed for many years in the future.
 
@@ -26,7 +26,7 @@ uninterpretable.
 
 This repository contains:
 
--   The specification for arf (in specification.org)
+-   The specification for arf (in specification.org). This is also hosted at https://meliza.org/specifications/arf/.
 -   A fast, type-safe C++ interface for reading and writing arf files
 -   A python interface for reading and writing arf files (based on h5py).
 
@@ -37,17 +37,16 @@ neuroscientists and behavioral biologists interested in using it. We're
 particularly interested in use cases that don't fit the current specification.
 Please post issues or contact Dan Meliza (dan at meliza.org) directly.
 
-The MATLAB interface is out of data and could use some work.
+The MATLAB interface is out of date and could use some work.
 
 ### installation
 
 ARF files require HDF5>=1.8 (<http://www.hdfgroup.org/HDF5>).
 
-The python interface requires Python 2.6+ or 3.2+, numpy 1.6+, and h5py 2.0+
-(<http://code.google.com/p/h5py/>). To install the module:
+The python interface requires Python >=2.6 or >=3.3, numpy>=1.3, and h5py>=2.2. To install the module:
 
 ```bash
-python setup.py install
+pip install arf
 ```
 
 To use the C++ interface, you need boost>=1.42 (<http://boost.org>). In addition,
@@ -113,9 +112,21 @@ h5dump -d /test_0001/pcm -b LE -o test_0001.pcm file.arf
 
 ### related projects
 
--   pandora (<https://github.com/G-Node/pandora>) has the most similar goals and
-    is also implemented on top of HDF5. The data schema is considerably more complex.
--   neuroshare (<http://neuroshare.org>) is a set of routines for reading and
+#### open data formats
+
+-   [neurodata without borders](http://www.nwb.org) has similar goals and also
+    uses HDF5 for storage. The data schema is considerably more complex, but it
+    does seem to be achieving growing adoption.
+-   [pandora](https://github.com/G-Node/pandora) is also under active development
+
+#### i/o libraries
+
+-   [neo](https://github.com/NeuralEnsemble/python-neo) is a Python package for
+    working with electrophysiology data in Python, together with support for
+    reading a wide range of neurophysiology file formats.
+-   [neuroshare](http://neuroshare.org) is a set of routines for reading and
     writing data in various proprietary and open formats.
+
+### code status
 
 [![Build Status](https://travis-ci.org/melizalab/arf.png?branch=master)](https://travis-ci.org/melizalab/arf)
