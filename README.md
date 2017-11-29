@@ -1,6 +1,6 @@
 ## arf
 
-The Advanced Recording Format [ARF](See https://meliza.org/specifications/arf/) is an open standard for storing data from
+The Advanced Recording Format [ARF](https://meliza.org/specifications/arf/) is an open standard for storing data from
 neuronal, acoustic, and behavioral experiments in a portable, high-performance, archival
 format. The goal is to enable labs to share data and tools, and to allow
 valuable data to be accessed and analyzed for many years in the future.
