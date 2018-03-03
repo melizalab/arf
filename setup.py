@@ -4,8 +4,8 @@
 import sys
 import os
 
-if sys.hexversion < 0x02060000:
-    raise RuntimeError("Python 2.6 or higher required")
+if sys.version_info[:2] < (2, 7) or (3, 0) <= sys.version_info[:2] < (3, 4):
+    raise RuntimeError("Python version 2.7 or >= 3.4 required.")
 
 # setuptools 0.7+ doesn't play nice with distribute, so try to use existing
 # package if possible
@@ -16,7 +16,7 @@ except ImportError:
     use_setuptools()
     from setuptools import setup
 
-VERSION = '2.2.1'
+from arf import __version__
 
 cls_txt = """
 Development Status :: 5 - Production/Stable
@@ -49,14 +49,14 @@ if (os.environ.get('TRAVIS') == 'true' and os.environ.get('TRAVIS_PYTHON_VERSION
 
 setup(
     name='arf',
-    version=VERSION,
+    version=__version__,
     description=short_desc,
     long_description=long_desc,
     classifiers=[x for x in cls_txt.split("\n") if x],
     author='Dan Meliza',
     maintainer='Dan Meliza',
     url="https://github.com/melizalab/arf",
-    download_url="https://github.com/melizalab/arf/archive/%s.tar.gz" % VERSION,
+    download_url="https://github.com/melizalab/arf/archive/%s.tar.gz" % __version__,
     install_requires=install_requires,
 
     py_modules=['arf'],

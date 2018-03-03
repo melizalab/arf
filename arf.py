@@ -6,7 +6,7 @@ import numpy as nx
 from h5py.version import version as h5py_version, hdf5_version
 
 spec_version = "2.1"
-__version__ = version = "2.2.1"
+__version__ = version = "2.2.2"
 
 __doc__ = """
 This is ARF, a python library for storing and accessing audio and ephys data in
