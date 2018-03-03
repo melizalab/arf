@@ -1,5 +1,8 @@
 ---
-title: pproc-json specification
+title: arf specification
+redirect_from:
+  - /specifications/arf/
+  - /spec:1/
 ---
 
 The Advanced Recording Format (ARF) is a specification for storing
@@ -8,14 +11,15 @@ metadata and derived quantities in a hierarchical structure. ARF is based on the
 [HDF5 format](http://www.hdfgroup.org/HDF5/), allowing files to be accessed on a
 wide range of operating systems and architectures.
 
+-   Name: <https://meliza.org/spec:1/arf> (1/arf)
 -   Editor: Dan Meliza (dan at meliza.org)
 -   Version: 2.1
 -   State:  released
--   URL: <http://meliza.org/specifications/arf>
+-   MIME type: `application/vnd.meliza-org.arf; version=2.1`
 
 ## Licence
 
-Copyright (c) 2010-2013 C Daniel Meliza.
+Copyright (c) 2010-2018 C Daniel Meliza.
 
 This Specification is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the Free
@@ -32,8 +36,7 @@ this program; if not, see <http://www.gnu.org/licenses>.
 
 ## Change Process
 
-This Specification is a free and [open standard](http://www.digistan.org/open-standard:definition) and is governed by the Digital
-Standards Organization's Consensus-Oriented Specification System ([COSS](http://www.digistan.org/spec:1/COSS)).
+This Specification is a free and open Consensus-Oriented Specification System ([COSS](https://rfc.unprotocols.org/spec:2/COSS/)).
 
 Version numbering from 2.0 on must be [semantic](http://semver.org). Changes that
 maintain backwards compatibility (i.e., that do not change or remove any

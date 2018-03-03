@@ -1,9 +1,12 @@
 ## arf
 
-The Advanced Recording Format [ARF](https://meliza.org/specifications/arf/) is an open standard for storing data from
-neuronal, acoustic, and behavioral experiments in a portable, high-performance, archival
-format. The goal is to enable labs to share data and tools, and to allow
-valuable data to be accessed and analyzed for many years in the future.
+[![Build Status](https://travis-ci.org/melizalab/arf.png?branch=master)](https://travis-ci.org/melizalab/arf)
+
+The Advanced Recording Format [ARF](https://meliza.org/spec:1/arf/) is an open
+standard for storing data from neuronal, acoustic, and behavioral experiments in
+a portable, high-performance, archival format. The goal is to enable labs to
+share data and tools, and to allow valuable data to be accessed and analyzed for
+many years in the future.
 
 **ARF** is built on the the [HDF5](http://www.hdfgroup.org/HDF5/) format, and
 all arf files are accessible through standard HDF5 tools, including interfaces
@@ -26,7 +29,7 @@ uninterpretable.
 
 This repository contains:
 
--   The specification for arf (in specification.org). This is also hosted at https://meliza.org/specifications/arf/.
+-   The specification for arf (in specification.md). This is also hosted at https://meliza.org/spec:1/arf/.
 -   A fast, type-safe C++ interface for reading and writing arf files
 -   A python interface for reading and writing arf files (based on h5py).
 
@@ -43,7 +46,7 @@ The MATLAB interface is out of date and could use some work.
 
 ARF files require HDF5>=1.8 (<http://www.hdfgroup.org/HDF5>).
 
-The python interface requires Python >=2.6 or >=3.3, numpy>=1.3, and h5py>=2.2. To install the module:
+The python interface requires Python 2.7 or >=3.3, numpy>=1.3, and h5py>=2.2. To install the module:
 
 ```bash
 pip install arf
@@ -112,6 +115,8 @@ h5dump -d /test_0001/pcm -b LE -o test_0001.pcm file.arf
 
 ### related projects
 
+- [arfx](https://github.com/melizalab/arfx) is a commandline tool for manipulating ARF files.
+
 #### open data formats
 
 -   [neurodata without borders](http://www.nwb.org) has similar goals and also
@@ -126,7 +131,3 @@ h5dump -d /test_0001/pcm -b LE -o test_0001.pcm file.arf
     reading a wide range of neurophysiology file formats.
 -   [neuroshare](http://neuroshare.org) is a set of routines for reading and
     writing data in various proprietary and open formats.
-
-### code status
-
-[![Build Status](https://travis-ci.org/melizalab/arf.png?branch=master)](https://travis-ci.org/melizalab/arf)
