@@ -7,14 +7,7 @@ import os
 if sys.version_info[:2] < (2, 7) or (3, 0) <= sys.version_info[:2] < (3, 4):
     raise RuntimeError("Python version 2.7 or >= 3.4 required.")
 
-# setuptools 0.7+ doesn't play nice with distribute, so try to use existing
-# package if possible
-try:
-    from setuptools import setup
-except ImportError:
-    from ez_setup import use_setuptools
-    use_setuptools()
-    from setuptools import setup
+from setuptools import setup
 
 from arf import __version__
 

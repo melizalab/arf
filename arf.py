@@ -1,28 +1,21 @@
 # -*- coding: utf-8 -*-
 # -*- mode: python -*-
+"""
+This is ARF, a python library for storing and accessing audio and ephys data in
+HDF5 containers.
+"""
 from __future__ import division
 from __future__ import unicode_literals
-import numpy as nx
-from h5py.version import version as h5py_version, hdf5_version
 
 spec_version = "2.1"
 __version__ = version = "2.3.0"
 
-__doc__ = """
-This is ARF, a python library for storing and accessing audio and ephys data in
-HDF5 containers.
-
-Library versions:
- arf: %s
- h5py: %s
- HDF5: %s
-""" % (version, h5py_version, hdf5_version)
-
+def version_info():
+    from h5py.version import version as h5py_version, hdf5_version
+    return "Library versions:\n arf: %s\n h5py: %s\n HDF5: %s" % (__version__, h5py_version, hdf5_version)
 
 class DataTypes:
-
-    """Available data types, by name and integer code:
-    """
+    """Available data types, by name and integer code: """
     UNDEFINED, ACOUSTIC, EXTRAC_HP, EXTRAC_LF, EXTRAC_EEG, INTRAC_CC, INTRAC_VC = range(
         0, 7)
     EVENT, SPIKET, BEHAVET = range(1000, 1003)
@@ -47,7 +40,7 @@ class DataTypes:
 
 
 def open_file(name, mode=None, driver=None, libver=None, userblock_size=None, **kwargs):
-    """Opens an ARF file, creating as necessary.
+    """Open an ARF file, creating as necessary.
 
     Use this instead of h5py.File to ensure that root-level attributes and group
     creation property lists are set correctly.
@@ -87,7 +80,7 @@ def open_file(name, mode=None, driver=None, libver=None, userblock_size=None, **
 
 
 def create_entry(group, name, timestamp, **attributes):
-    """Creates a new ARF entry under group, setting required attributes.
+    """Create a new ARF entry under group, setting required attributes.
 
     An entry is an abstract collection of data which all refer to the same time
     frame. Data can include physiological recordings, sound recordings, and
@@ -126,7 +119,7 @@ def create_entry(group, name, timestamp, **attributes):
 def create_dataset(group, name, data, units='', datatype=DataTypes.UNDEFINED,
                    chunks=True, maxshape=None, compression=None,
                    **attributes):
-    """Creates an ARF dataset under group, setting required attributes
+    """Create an ARF dataset under group, setting required attributes
 
     Required arguments:
     name --   the name of dataset in which to store the data
@@ -156,10 +149,11 @@ def create_dataset(group, name, data, units='', datatype=DataTypes.UNDEFINED,
 
     Returns the created dataset
     """
+    from numpy import asarray
     srate = attributes.get('sampling_rate', None)
     # check data validity before doing anything
     if not hasattr(data, 'dtype'):
-        data = nx.asarray(data)
+        data = asarray(data)
         if data.dtype.kind in ('S', 'O', 'U'):
             raise ValueError(
                 "data must be in array with numeric or compound type")
@@ -188,7 +182,7 @@ def create_dataset(group, name, data, units='', datatype=DataTypes.UNDEFINED,
 
 
 def create_table(group, name, dtype, **attributes):
-    """Creates a new array dataset under group with compound datatype and maxshape=(None,)"""
+    """Create a new array dataset under group with compound datatype and maxshape=(None,)"""
     dset = group.create_dataset(
         name, shape=(0,), dtype=dtype, maxshape=(None,))
     set_attributes(dset, **attributes)
@@ -196,7 +190,7 @@ def create_table(group, name, dtype, **attributes):
 
 
 def append_data(dset, data):
-    """Appends data to dset along axis 0. Data must be a single element or
+    """Append data to dset along axis 0. Data must be a single element or
     a 1D array of the same type as the dataset (including compound datatypes)."""
     N = data.shape[0] if hasattr(data, 'shape') else 1
     if N == 0:
@@ -208,7 +202,7 @@ def append_data(dset, data):
 
 
 def check_file_version(file):
-    """Checks the ARF version attribute of file for compatibility.
+    """Check the ARF version attribute of file for compatibility.
 
     Raises DeprecationWarning for backwards-incompatible files, FutureWarning
     for (potentially) forwards-incompatible files, and UserWarning for files
@@ -245,7 +239,7 @@ def check_file_version(file):
 
 
 def set_attributes(node, overwrite=True, **attributes):
-    """Sets multiple attributes on node.
+    """Set multiple attributes on node.
 
     If overwrite is False, and the attribute already exists, does nothing. If
     the value for a key is None, the attribute is deleted.
@@ -284,7 +278,7 @@ def keys_by_creation(group):
 
 
 def convert_timestamp(obj):
-    """Makes an ARF timestamp from an object.
+    """Make an ARF timestamp from an object.
 
     Argument can be a datetime.datetime object, a time.struct_time, an integer,
     a float, or a tuple of integers. The returned value is a numpy array with
@@ -298,8 +292,9 @@ def convert_timestamp(obj):
     import numbers
     from datetime import datetime
     from time import mktime, struct_time
+    from numpy import zeros
 
-    out = nx.zeros(2, dtype='int64')
+    out = zeros(2, dtype='int64')
     if isinstance(obj, datetime):
         out[0] = mktime(obj.timetuple())
         out[1] = obj.microsecond
@@ -319,21 +314,19 @@ def convert_timestamp(obj):
 
 
 def timestamp_to_datetime(timestamp):
-    """Converts an ARF timestamp a datetime.datetime object (naive local time)"""
+    """Convert an ARF timestamp to a datetime.datetime object (naive local time)"""
     from datetime import datetime, timedelta
     obj = datetime.fromtimestamp(timestamp[0])
     return obj + timedelta(microseconds=int(timestamp[1]))
 
 
 def timestamp_to_float(timestamp):
-    """Converts an ARF timestamp to a floating point (sec since epoch) """
-    return nx.dot(timestamp, (1.0, 1e-6))
+    """Convert an ARF timestamp to a floating point (sec since epoch) """
+    return sum(t1 * t2 for t1, t2 in zip(timestamp, (1.0, 1e-6)))
 
 
 def set_uuid(obj, uuid=None):
-    """Sets the uuid attribute of an HDF5 object.
-
-    Use this method to ensure correct dtype """
+    """Set the uuid attribute of an HDF5 object. Use this method to ensure correct dtype """
     from uuid import uuid4, UUID
     if uuid is None:
         uuid = uuid4()
@@ -349,7 +342,7 @@ def set_uuid(obj, uuid=None):
 
 
 def get_uuid(obj):
-    """Returns the uuid for obj, or null uuid if none is set"""
+    """Return the uuid for obj, or null uuid if none is set"""
     # TODO: deprecate null uuid ret val
     from uuid import UUID
     try:
@@ -365,7 +358,7 @@ def get_uuid(obj):
 
 
 def count_children(obj, type=None):
-    """Returns the number of children of obj, optionally restricting by class"""
+    """Return the number of children of obj, optionally restricting by class"""
     if type is None:
         return len(obj)
     else:
@@ -376,19 +369,19 @@ def count_children(obj, type=None):
 
 
 def is_time_series(dset):
-    """Returns True if dset is a sampled time series (units are not time)"""
+    """Return True if dset is a sampled time series (units are not time)"""
     return (not is_marked_pointproc(dset)
             and 'sampling_rate' in dset.attrs
             and dset.attrs['units'] not in ('s', 'samples'))
 
 
 def is_marked_pointproc(dset):
-    """Returns True if dset is a marked point process (a complex dtype with 'start' field)"""
+    """Return True if dset is a marked point process (a complex dtype with 'start' field)"""
     return dset.dtype.names is not None and 'start' in dset.dtype.names
 
 
 def count_channels(dset):
-    """ Returns the number of channels (columns) in dset """
+    """Return the number of channels (columns) in dset """
     try:
         return dset.shape[1]
     except IndexError:

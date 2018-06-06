@@ -9,6 +9,7 @@ from __future__ import unicode_literals
 from nose.tools import *
 from nose.plugins.skip import SkipTest
 from distutils import version
+from h5py.version import version as h5py_version, hdf5_version
 
 import numpy as nx
 import arf
@@ -151,7 +152,7 @@ def test06_creation_iter():
         arf.create_dataset(g, "dset", (1,), sampling_rate=1)
     assert_equal(list(arf.keys_by_creation(fp)), entry_names)
 
-if version.StrictVersion(arf.h5py_version) < version.StrictVersion("2.2"):
+if version.StrictVersion(h5py_version) < version.StrictVersion("2.2"):
     test06_creation_iter = SkipTest(test06_creation_iter)
 
 
