@@ -157,8 +157,8 @@ times to be converted to real times. It is required if the data are sampled (as
 in a time series) or if time values in a point process are in units of samples.
 Only point proceses with real-valued units of time may omit the sampling rate.
 
-Real-valued times must be in units of seconds. Discrete-valued times must be in
-units of samples.
+Real-valued times must be in units of seconds ('s'). Discrete-valued times must be in
+units of 'samples'.
 
 Each channel of data in an entry shall be represented by a separate HDF5
 dataset. The format of each dataset depends on the type of data it stores.

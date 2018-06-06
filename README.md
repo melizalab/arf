@@ -46,7 +46,7 @@ The MATLAB interface is out of date and could use some work.
 
 ARF files require HDF5>=1.8 (<http://www.hdfgroup.org/HDF5>).
 
-The python interface requires Python 2.7 or >=3.3, numpy>=1.3, and h5py>=2.2. To install the module:
+The python interface requires Python 2.7 or >=3.4, numpy>=1.3, and h5py>=2.2. To install the module:
 
 ```bash
 pip install arf

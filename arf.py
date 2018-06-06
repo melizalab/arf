@@ -6,7 +6,7 @@ import numpy as nx
 from h5py.version import version as h5py_version, hdf5_version
 
 spec_version = "2.1"
-__version__ = version = "2.2.2"
+__version__ = version = "2.3.0"
 
 __doc__ = """
 This is ARF, a python library for storing and accessing audio and ephys data in
@@ -385,6 +385,14 @@ def is_time_series(dset):
 def is_marked_pointproc(dset):
     """Returns True if dset is a marked point process (a complex dtype with 'start' field)"""
     return dset.dtype.names is not None and 'start' in dset.dtype.names
+
+
+def count_channels(dset):
+    """ Returns the number of channels (columns) in dset """
+    try:
+        return dset.shape[1]
+    except IndexError:
+        return 1
 
 # Variables:
 # End:
