@@ -14,6 +14,7 @@ def version_info():
     from h5py.version import version as h5py_version, hdf5_version
     return "Library versions:\n arf: %s\n h5py: %s\n HDF5: %s" % (__version__, h5py_version, hdf5_version)
 
+
 class DataTypes:
     """Available data types, by name and integer code: """
     UNDEFINED, ACOUSTIC, EXTRAC_HP, EXTRAC_LF, EXTRAC_EEG, INTRAC_CC, INTRAC_VC = range(
@@ -199,6 +200,23 @@ def append_data(dset, data):
     newlen = oldlen + N
     dset.resize(newlen, axis=0)
     dset[oldlen:] = data
+
+
+def select_interval(dset, begin, end):
+    """Returns values in a dataset between [begin, end), in seconds for time series;
+    in time units for point processes"""
+    if is_marked_pointproc(dset):
+        t = dset["start"]
+        idx = (t >= begin) & (t < end)
+    elif is_time_series(dset):
+        Fs = dset.attrs["sampling_rate"]
+        i_begin = int(begin * Fs)
+        i_end = int(end * Fs)
+        idx = slice(i_begin, i_end)
+    else:
+        t = dset[:]
+        idx = (t >= begin) & (t < end)
+    return dset[idx]
 
 
 def check_file_version(file):

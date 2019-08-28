@@ -182,6 +182,18 @@ def test09_timestamp_conversion():
     assert_equal(int(arf.timestamp_to_float(ts)), 1000)
 
 
+def test10_select_from_timeseries():
+    entry = fp[entry_base % 0]
+    for data in datasets:
+        dset = entry[data["name"]]
+        if data.get("units", None) == "samples":
+            selected = arf.select_interval(dset, 0, data["sampling_rate"])
+        else:
+            selected = arf.select_interval(dset, 0.0, 1.0)
+        if arf.is_time_series(dset):
+            nx.testing.assert_array_equal(selected, data["data"][:data["sampling_rate"]])
+
+
 def test99_various():
     # test some functions difficult to cover otherwise
     arf.DataTypes._doc()
