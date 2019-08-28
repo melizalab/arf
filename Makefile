@@ -1,8 +1,8 @@
 
 PREFIX=/usr/local
 CXX ?= g++
-CFLAGS = -g -Wall -Ic++ -I/opt/local/include
-LDFLAGS = -L/opt/local/lib
+CFLAGS = -g -Wall -Ic++ -I/opt/local/include `pkg-config --cflags hdf5`
+LDFLAGS = -L/opt/local/lib `pkg-config --libs-only-L hdf5`
 
 all: test
 
