@@ -87,6 +87,7 @@ bad_datasets = [dict(name="string datatype",
 def create_entry(name):
     g = arf.create_entry(fp, name, tstamp, **entry_attributes)
     assert_true(name in fp)
+    assert_true(arf.is_entry(g))
     assert_true(arf.timestamp_to_float(g.attrs['timestamp']) > 0)
     for k in entry_attributes:
         assert_true(k in g.attrs)
@@ -95,6 +96,7 @@ def create_entry(name):
 def create_dataset(g, dset):
     d = arf.create_dataset(g, **dset)
     assert_equal(d.shape, dset['data'].shape)
+    assert_false(arf.is_entry(d))
 
 
 def test00_create_entries():

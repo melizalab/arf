@@ -398,6 +398,12 @@ def is_marked_pointproc(dset):
     return dset.dtype.names is not None and 'start' in dset.dtype.names
 
 
+def is_entry(obj):
+    """Return True if the object is an entry (i.e. an hdf5 group)"""
+    import h5py as h5
+    return isinstance(obj, h5.Group)
+
+
 def count_channels(dset):
     """Return the number of channels (columns) in dset """
     try:
