@@ -8,7 +8,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 spec_version = "2.1"
-__version__ = version = "2.3.0"
+__version__ = version = "2.5.0"
 
 def version_info():
     from h5py.version import version as h5py_version, hdf5_version
@@ -69,7 +69,8 @@ def open_file(name, mode=None, driver=None, libver=None, userblock_size=None, **
         fp = files.File(name, mode=mode, driver=driver,
                         libver=libver, **kwargs)
     else:
-        fapl = files.make_fapl(driver, libver, **kwargs)
+        fapl = files.make_fapl(driver, libver,
+                               rdcc_nslots=None, rdcc_nbytes=None, rdcc_w0=None, **kwargs)
         fp = files.File(files.make_fid(name, mode, userblock_size, fapl, fcpl))
 
     if not exists and fp.mode == 'r+':
