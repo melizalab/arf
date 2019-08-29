@@ -204,18 +204,24 @@ def append_data(dset, data):
 
 
 def select_interval(dset, begin, end):
-    """Extracts values from dataset between [begin, end), in seconds for time series;
-    in time units for point processes. For point process data, times are offset to
-    the beginning of the interval. Returns (values, offset)"""
+    """Extracts values from dataset between [begin, end), specified in seconds. For
+    point process data, times are offset to the beginning of the interval.
+    Returns (values, offset)
+
+    """
+    try:
+        Fs = dset.attrs["sampling_rate"]
+        begin = int(begin * Fs)
+        end = int(end * Fs)
+    except KeyError:
+        pass
+
     if is_marked_pointproc(dset):
         t = dset["start"]
         idx = (t >= begin) & (t < end)
         data = dset[idx]
         data["start"] -= begin
     elif is_time_series(dset):
-        Fs = dset.attrs["sampling_rate"]
-        begin = int(begin * Fs)
-        end = int(end * Fs)
         idx = slice(begin, end)
         data = dset[idx]
     else:
