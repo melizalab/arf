@@ -203,20 +203,25 @@ def append_data(dset, data):
 
 
 def select_interval(dset, begin, end):
-    """Returns values in a dataset between [begin, end), in seconds for time series;
-    in time units for point processes"""
+    """Extracts values from dataset between [begin, end), in seconds for time series;
+    in time units for point processes. For point process data, times are offset to
+    the beginning of the interval. Returns (values, offset)"""
     if is_marked_pointproc(dset):
         t = dset["start"]
         idx = (t >= begin) & (t < end)
+        data = dset[idx]
+        data["start"] -= begin
     elif is_time_series(dset):
         Fs = dset.attrs["sampling_rate"]
-        i_begin = int(begin * Fs)
-        i_end = int(end * Fs)
-        idx = slice(i_begin, i_end)
+        begin = int(begin * Fs)
+        end = int(end * Fs)
+        idx = slice(begin, end)
+        data = dset[idx]
     else:
         t = dset[:]
         idx = (t >= begin) & (t < end)
-    return dset[idx]
+        data = dset[idx] - begin
+    return data, begin
 
 
 def check_file_version(file):

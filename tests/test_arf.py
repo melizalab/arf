@@ -189,9 +189,9 @@ def test10_select_from_timeseries():
     for data in datasets:
         dset = entry[data["name"]]
         if data.get("units", None) == "samples":
-            selected = arf.select_interval(dset, 0, data["sampling_rate"])
+            selected, offset = arf.select_interval(dset, 0, data["sampling_rate"])
         else:
-            selected = arf.select_interval(dset, 0.0, 1.0)
+            selected, offset = arf.select_interval(dset, 0.0, 1.0)
         if arf.is_time_series(dset):
             nx.testing.assert_array_equal(selected, data["data"][:data["sampling_rate"]])
 
