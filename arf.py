@@ -72,7 +72,7 @@ def open_file(name, mode=None, driver=None, libver=None, userblock_size=None, **
                         libver=libver, **kwargs)
     else:
         if StrictVersion(h5py_version) >= StrictVersion('2.9'):
-            kwargs.extend(rdcc_nslots=None, rdcc_nbytes=None, rdcc_w0=None)
+            kwargs.update(rdcc_nslots=None, rdcc_nbytes=None, rdcc_w0=None)
         fapl = files.make_fapl(driver, libver, **kwargs)
         fp = files.File(files.make_fid(name, mode, userblock_size, fapl, fcpl))
 
