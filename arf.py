@@ -49,6 +49,8 @@ def open_file(name, mode=None, driver=None, libver=None, userblock_size=None, **
     """
     import sys
     import os
+    from h5py.version import version as h5py_version
+    from distutils.version import StrictVersion
     from h5py import h5p
     from h5py._hl import files
 
@@ -69,8 +71,9 @@ def open_file(name, mode=None, driver=None, libver=None, userblock_size=None, **
         fp = files.File(name, mode=mode, driver=driver,
                         libver=libver, **kwargs)
     else:
-        fapl = files.make_fapl(driver, libver,
-                               rdcc_nslots=None, rdcc_nbytes=None, rdcc_w0=None, **kwargs)
+        if StrictVersion(h5py_version) >= StrictVersion('2.9'):
+            kwargs.extend(rdcc_nslots=None, rdcc_nbytes=None, rdcc_w0=None)
+        fapl = files.make_fapl(driver, libver, **kwargs)
         fp = files.File(files.make_fid(name, mode, userblock_size, fapl, fcpl))
 
     if not exists and fp.mode == 'r+':
