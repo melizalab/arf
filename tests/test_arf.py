@@ -195,6 +195,13 @@ def test10_select_from_timeseries():
         if arf.is_time_series(dset):
             nx.testing.assert_array_equal(selected, data["data"][:data["sampling_rate"]])
 
+def test11_copy_entry_attrs():
+    src_entry = fp[entry_base % 0]
+    src_entry_attrs = dict(src_entry.attrs)
+    src_entry_timestamp = src_entry_attrs.pop("timestamp")
+    tgt_entry = arf.create_entry(fp, "copied_entry", src_entry_timestamp, **src_entry_attrs)
+    assert_equal(src_entry.attrs['uuid'], tgt_entry.attrs['uuid'])
+
 
 def test99_various():
     # test some functions difficult to cover otherwise

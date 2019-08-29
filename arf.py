@@ -352,7 +352,7 @@ def set_uuid(obj, uuid=None):
         if len(uuid) == 16:
             uuid = UUID(bytes=uuid)
         else:
-            uuid = UUID(hex=uuid)
+            uuid = UUID(hex=uuid.decode('ascii'))
 
     if "uuid" in obj.attrs:
         del obj.attrs["uuid"]
