@@ -8,7 +8,8 @@ from __future__ import division
 from __future__ import unicode_literals
 
 spec_version = "2.1"
-__version__ = version = "2.5.1"
+__version__ = version = "2.6.0"
+
 
 def version_info():
     from h5py.version import version as h5py_version, hdf5_version
@@ -230,7 +231,10 @@ def select_interval(dset, begin, end):
     else:
         t = dset[:]
         idx = (t >= begin) & (t < end)
-        data = dset[idx] - begin
+        if idx.size > 0:
+            data = dset[idx] - begin
+        else:
+            data = idx
     return data, begin
 
 

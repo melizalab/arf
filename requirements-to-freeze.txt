@@ -1,2 +1,1 @@
-nose
 h5py

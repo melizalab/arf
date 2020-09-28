@@ -3,13 +3,11 @@
 # -*- mode: python -*-
 import sys
 import os
-
-if sys.version_info[:2] < (2, 7) or (3, 0) <= sys.version_info[:2] < (3, 4):
-    raise RuntimeError("Python version 2.7 or >= 3.4 required.")
-
 from setuptools import setup
-
 from arf import __version__
+
+if sys.version_info[:2] < (3, 5):
+    raise RuntimeError("Python version 3.5 or greater required.")
 
 cls_txt = """
 Development Status :: 5 - Production/Stable
@@ -36,7 +34,7 @@ Supported data types include sampled data and event data (i.e. spike times).
 Requires h5py (at least 2.2) and numpy (at least 1.3).
 """
 
-install_requires = ["numpy>=1.3", "h5py>=2.2"]
+install_requires = ["h5py>=2.10"]
 if (os.environ.get('TRAVIS') == 'true' and os.environ.get('TRAVIS_PYTHON_VERSION').startswith('2.6')):
     install_requires.append('unittest2>=0.5.1')
 
@@ -53,7 +51,7 @@ setup(
     install_requires=install_requires,
 
     py_modules=['arf'],
-    test_suite='nose.collector'
+    test_suite='tests'
 )
 # Variables:
 # End:

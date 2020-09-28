@@ -1,10 +1,10 @@
 sudo: false
 language: python
 python:
-- '2.7'
-- '3.4'
 - '3.5'
 - '3.6'
+- '3.7'
+- '3.8'
 compiler:
 - gcc
 - clang
@@ -15,9 +15,10 @@ addons:
     - libboost-dev
 install:
 - pip install -r requirements.txt
+- pip install pytest
 script:
 - make test
-- python setup.py test
+- pytest -v
 notifications:
   slack:
     secure: gkEltYImd4mDmRx/WZrxT0ylPlP6ycUhOueEgCBV54mY/3PPN28dIaf4DXhzRdhOw50g9b5cRYyrDirX2IlGUq5aUBNC6b6PllytoCEhiZbqLvkEdGjb+vix+IQ9LvOE+mTr8uOkC96Bs6ai3nXK0W00U/9PjjWfAdTflAnf/xg=
