@@ -1,11 +1,6 @@
 # -*- coding: utf-8 -*-
 # -*- mode: python -*-
 
-# test harness for arf interface. assumes the underlying hdf5 and h5py
-# libraries are working.
-from __future__ import division
-from __future__ import unicode_literals
-
 import unittest
 from distutils import version
 from h5py.version import version as h5py_version

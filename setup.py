@@ -6,8 +6,8 @@ import os
 from setuptools import setup
 from arf import __version__
 
-if sys.version_info[:2] < (3, 5):
-    raise RuntimeError("Python version 3.5 or greater required.")
+if sys.version_info[:2] < (3, 6):
+    raise RuntimeError("Python version 3.6 or greater required.")
 
 cls_txt = """
 Development Status :: 5 - Production/Stable
@@ -31,12 +31,10 @@ are HDF5 files used to store audio and neurophysiological recordings in a
 rational, hierarchical format. Data are organized around the concept of an
 entry, which is a set of data channels that all start at the same time.
 Supported data types include sampled data and event data (i.e. spike times).
-Requires h5py (at least 2.2) and numpy (at least 1.3).
+Requires h5py (at least 2.8) and numpy (at least 1.3).
 """
 
-install_requires = ["h5py>=2.10"]
-if (os.environ.get('TRAVIS') == 'true' and os.environ.get('TRAVIS_PYTHON_VERSION').startswith('2.6')):
-    install_requires.append('unittest2>=0.5.1')
+install_requires = ["h5py>=2.8"]
 
 setup(
     name='arf',
