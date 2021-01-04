@@ -13,13 +13,20 @@ __version__ = version = "2.6.2"
 
 def version_info():
     from h5py.version import version as h5py_version, hdf5_version
-    return "Library versions:\n arf: %s\n h5py: %s\n HDF5: %s" % (__version__, h5py_version, hdf5_version)
+
+    return "Library versions:\n arf: %s\n h5py: %s\n HDF5: %s" % (
+        __version__,
+        h5py_version,
+        hdf5_version,
+    )
 
 
 class DataTypes:
     """Available data types, by name and integer code: """
+
     UNDEFINED, ACOUSTIC, EXTRAC_HP, EXTRAC_LF, EXTRAC_EEG, INTRAC_CC, INTRAC_VC = range(
-        0, 7)
+        0, 7
+    )
     EVENT, SPIKET, BEHAVET = range(1000, 1003)
     INTERVAL, STIMI, COMPONENTL = range(2000, 2003)
 
@@ -27,13 +34,15 @@ class DataTypes:
     def _doc(cls):
         out = str(cls.__doc__)
         for v, k in sorted(cls._todict().items()):
-            out += '\n%s:%d' % (k, v)
+            out += "\n%s:%d" % (k, v)
         return out
 
     @classmethod
     def _todict(cls):
         """ generate a dict keyed by value """
-        return dict((getattr(cls, attr), attr) for attr in dir(cls) if not attr.startswith('_'))
+        return dict(
+            (getattr(cls, attr), attr) for attr in dir(cls) if not attr.startswith("_")
+        )
 
     @classmethod
     def _fromstring(cls, s):
@@ -65,23 +74,23 @@ def open_file(name, mode=None, driver=None, libver=None, userblock_size=None, **
     exists = os.path.exists(name)
     try:
         fcpl = h5p.create(h5p.FILE_CREATE)
-        fcpl.set_link_creation_order(
-            h5p.CRT_ORDER_TRACKED | h5p.CRT_ORDER_INDEXED)
+        fcpl.set_link_creation_order(h5p.CRT_ORDER_TRACKED | h5p.CRT_ORDER_INDEXED)
     except AttributeError:
         # older version of h5py
-        fp = files.File(name, mode=mode, driver=driver,
-                        libver=libver, **kwargs)
+        fp = files.File(name, mode=mode, driver=driver, libver=libver, **kwargs)
     else:
-        if StrictVersion(h5py_version) >= StrictVersion('2.9'):
+        if StrictVersion(h5py_version) >= StrictVersion("2.9"):
             kwargs.update(rdcc_nslots=None, rdcc_nbytes=None, rdcc_w0=None)
         fapl = files.make_fapl(driver, libver, **kwargs)
         fp = files.File(files.make_fid(name, mode, userblock_size, fapl, fcpl))
 
-    if not exists and fp.mode == 'r+':
-        set_attributes(fp,
-                       arf_library='python',
-                       arf_library_version=__version__,
-                       arf_version=spec_version)
+    if not exists and fp.mode == "r+":
+        set_attributes(
+            fp,
+            arf_library="python",
+            arf_library_version=__version__,
+            arf_version=spec_version,
+        )
     return fp
 
 
@@ -106,25 +115,31 @@ def create_entry(group, name, timestamp, **attributes):
     """
     # create group using low-level interface to store creation order
     from h5py import h5p, h5g, _hl
+
     try:
         gcpl = h5p.create(h5p.GROUP_CREATE)
-        gcpl.set_link_creation_order(
-            h5p.CRT_ORDER_TRACKED | h5p.CRT_ORDER_INDEXED)
+        gcpl.set_link_creation_order(h5p.CRT_ORDER_TRACKED | h5p.CRT_ORDER_INDEXED)
     except AttributeError:
         grp = group.create_group(name)
     else:
         name, lcpl = group._e(name, lcpl=True)
         grp = _hl.group.Group(h5g.create(group.id, name, lcpl=lcpl, gcpl=gcpl))
     set_uuid(grp, attributes.pop("uuid", None))
-    set_attributes(grp,
-                   timestamp=convert_timestamp(timestamp),
-                   **attributes)
+    set_attributes(grp, timestamp=convert_timestamp(timestamp), **attributes)
     return grp
 
 
-def create_dataset(group, name, data, units='', datatype=DataTypes.UNDEFINED,
-                   chunks=True, maxshape=None, compression=None,
-                   **attributes):
+def create_dataset(
+    group,
+    name,
+    data,
+    units="",
+    datatype=DataTypes.UNDEFINED,
+    chunks=True,
+    maxshape=None,
+    compression=None,
+    **attributes
+):
     """Create an ARF dataset under group, setting required attributes
 
     Required arguments:
@@ -156,41 +171,43 @@ def create_dataset(group, name, data, units='', datatype=DataTypes.UNDEFINED,
     Returns the created dataset
     """
     from numpy import asarray
-    srate = attributes.get('sampling_rate', None)
+
+    srate = attributes.get("sampling_rate", None)
     # check data validity before doing anything
-    if not hasattr(data, 'dtype'):
+    if not hasattr(data, "dtype"):
         data = asarray(data)
-        if data.dtype.kind in ('S', 'O', 'U'):
-            raise ValueError(
-                "data must be in array with numeric or compound type")
-    if data.dtype.kind == 'V':
-        if 'start' not in data.dtype.names:
+        if data.dtype.kind in ("S", "O", "U"):
+            raise ValueError("data must be in array with numeric or compound type")
+    if data.dtype.kind == "V":
+        if "start" not in data.dtype.names:
             raise ValueError("complex event data requires 'start' field")
         if not isinstance(units, (list, tuple)):
             raise ValueError("complex event data requires sequence of units")
         if not len(units) == len(data.dtype.names):
             raise ValueError("number of units doesn't match number of fields")
-    if units == '':
+    if units == "":
         if srate is None or not srate > 0:
             raise ValueError(
-                "unitless data assumed time series and requires sampling_rate attribute")
-    elif units == 'samples':
+                "unitless data assumed time series and requires sampling_rate attribute"
+            )
+    elif units == "samples":
         if srate is None or not srate > 0:
             raise ValueError(
-                "data with units of 'samples' requires sampling_rate attribute")
+                "data with units of 'samples' requires sampling_rate attribute"
+            )
     # NB: can't really catch case where sampled data has units but doesn't
     # have sampling_rate attribute
 
     dset = group.create_dataset(
-        name, data=data, maxshape=maxshape, chunks=chunks, compression=compression)
+        name, data=data, maxshape=maxshape, chunks=chunks, compression=compression
+    )
     set_attributes(dset, units=units, datatype=datatype, **attributes)
     return dset
 
 
 def create_table(group, name, dtype, **attributes):
     """Create a new array dataset under group with compound datatype and maxshape=(None,)"""
-    dset = group.create_dataset(
-        name, shape=(0,), dtype=dtype, maxshape=(None,))
+    dset = group.create_dataset(name, shape=(0,), dtype=dtype, maxshape=(None,))
     set_attributes(dset, **attributes)
     return dset
 
@@ -198,7 +215,7 @@ def create_table(group, name, dtype, **attributes):
 def append_data(dset, data):
     """Append data to dset along axis 0. Data must be a single element or
     a 1D array of the same type as the dataset (including compound datatypes)."""
-    N = data.shape[0] if hasattr(data, 'shape') else 1
+    N = data.shape[0] if hasattr(data, "shape") else 1
     if N == 0:
         return
     oldlen = dset.shape[0]
@@ -249,14 +266,16 @@ def check_file_version(file):
 
     """
     from distutils.version import StrictVersion as Version
+
     try:
-        ver = file.attrs.get('arf_version', None)
+        ver = file.attrs.get("arf_version", None)
         if ver is None:
-            ver = file.attrs['arf_library_version']
+            ver = file.attrs["arf_library_version"]
     except KeyError:
         raise UserWarning(
             "Unable to determine ARF version for {0.filename};"
-            "created by another program?".format(file))
+            "created by another program?".format(file)
+        )
     try:
         # if the attribute is stored as a string, it's ascii-encoded
         ver = ver.decode("ascii")
@@ -264,14 +283,16 @@ def check_file_version(file):
         pass
     # should be backwards compatible after 1.1
     file_version = Version(ver)
-    if file_version < Version('1.1'):
+    if file_version < Version("1.1"):
         raise DeprecationWarning(
             "ARF library {} may have trouble reading file "
-            "version {} (< 1.1)".format(version, file_version))
-    elif file_version >= Version('3.0'):
+            "version {} (< 1.1)".format(version, file_version)
+        )
+    elif file_version >= Version("3.0"):
         raise FutureWarning(
             "ARF library {} may be incompatible with file "
-            "version {} (>= 3.0)".format(version, file_version))
+            "version {} (>= 3.0)".format(version, file_version)
+        )
     return file_version
 
 
@@ -300,17 +321,19 @@ def keys_by_creation(group):
 
     """
     from h5py import h5
+
     out = []
     try:
         group._id.links.iterate(
-            out.append, idx_type=h5.INDEX_CRT_ORDER, order=h5.ITER_INC)
+            out.append, idx_type=h5.INDEX_CRT_ORDER, order=h5.ITER_INC
+        )
     except (AttributeError, RuntimeError):
         # pre 2.2 shim
         def f(name):
-            if name.find(b'/', 1) == -1:
+            if name.find(b"/", 1) == -1:
                 out.append(name)
-        group._id.links.visit(
-            f, idx_type=h5.INDEX_CRT_ORDER, order=h5.ITER_INC)
+
+        group._id.links.visit(f, idx_type=h5.INDEX_CRT_ORDER, order=h5.ITER_INC)
     return map(group._d, out)
 
 
@@ -331,7 +354,7 @@ def convert_timestamp(obj):
     from time import mktime, struct_time
     from numpy import zeros
 
-    out = zeros(2, dtype='int64')
+    out = zeros(2, dtype="int64")
     if isinstance(obj, datetime):
         out[0] = mktime(obj.timetuple())
         out[1] = obj.microsecond
@@ -353,6 +376,7 @@ def convert_timestamp(obj):
 def timestamp_to_datetime(timestamp):
     """Convert an ARF timestamp to a datetime.datetime object (naive local time)"""
     from datetime import datetime, timedelta
+
     obj = datetime.fromtimestamp(timestamp[0])
     return obj + timedelta(microseconds=int(timestamp[1]))
 
@@ -365,30 +389,32 @@ def timestamp_to_float(timestamp):
 def set_uuid(obj, uuid=None):
     """Set the uuid attribute of an HDF5 object. Use this method to ensure correct dtype """
     from uuid import uuid4, UUID
+
     if uuid is None:
         uuid = uuid4()
     elif isinstance(uuid, bytes):
         if len(uuid) == 16:
             uuid = UUID(bytes=uuid)
         else:
-            uuid = UUID(hex=uuid.decode('ascii'))
+            uuid = UUID(hex=uuid.decode("ascii"))
 
     if "uuid" in obj.attrs:
         del obj.attrs["uuid"]
-    obj.attrs.create("uuid", str(uuid).encode('ascii'), dtype="|S36")
+    obj.attrs.create("uuid", str(uuid).encode("ascii"), dtype="|S36")
 
 
 def get_uuid(obj):
     """Return the uuid for obj, or null uuid if none is set"""
     # TODO: deprecate null uuid ret val
     from uuid import UUID
+
     try:
-        uuid = obj.attrs['uuid']
+        uuid = obj.attrs["uuid"]
     except KeyError:
         return UUID(int=0)
     # convert to unicode for python 3
     try:
-        uuid = uuid.decode('ascii')
+        uuid = uuid.decode("ascii")
     except (LookupError, AttributeError):
         pass
     return UUID(uuid)
@@ -407,19 +433,22 @@ def count_children(obj, type=None):
 
 def is_time_series(dset):
     """Return True if dset is a sampled time series (units are not time)"""
-    return (not is_marked_pointproc(dset)
-            and 'sampling_rate' in dset.attrs
-            and dset.attrs['units'] not in ('s', 'samples'))
+    return (
+        not is_marked_pointproc(dset)
+        and "sampling_rate" in dset.attrs
+        and dset.attrs["units"] not in ("s", "samples")
+    )
 
 
 def is_marked_pointproc(dset):
     """Return True if dset is a marked point process (a complex dtype with 'start' field)"""
-    return dset.dtype.names is not None and 'start' in dset.dtype.names
+    return dset.dtype.names is not None and "start" in dset.dtype.names
 
 
 def is_entry(obj):
     """Return True if the object is an entry (i.e. an hdf5 group)"""
     import h5py as h5
+
     return isinstance(obj, h5.Group)
 
 
@@ -429,6 +458,7 @@ def count_channels(dset):
         return dset.shape[1]
     except IndexError:
         return 1
+
 
 # Variables:
 # End:
