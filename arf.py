@@ -433,11 +433,9 @@ def count_children(obj, type=None):
 
 def is_time_series(dset):
     """Return True if dset is a sampled time series (units are not time)"""
-    return (
-        not is_marked_pointproc(dset)
-        and "sampling_rate" in dset.attrs
-        and dset.attrs["units"] not in ("s", "samples")
-    )
+    return (not is_marked_pointproc(dset)
+            and 'sampling_rate' in dset.attrs
+            and dset.attrs.get("units", None) not in ('s', 'samples'))
 
 
 def is_marked_pointproc(dset):
