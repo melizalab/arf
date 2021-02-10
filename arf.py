@@ -8,7 +8,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 spec_version = "2.1"
-__version__ = version = "2.6.2"
+__version__ = version = "2.6.3"
 
 
 def version_info():
