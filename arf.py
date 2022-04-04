@@ -61,8 +61,9 @@ def open_file(name, mode=None, driver=None, libver=None, userblock_size=None, **
     import os
     from h5py.version import version as h5py_version
     from distutils.version import StrictVersion
-    from h5py import h5p
-    from h5py._hl import files
+    from h5py import h5p, File
+    # Caution: This is a private API of h5py, subject to change without notice
+    from h5py._hl import files as _files
 
     try:
         # If the byte string doesn't match the default
@@ -77,12 +78,18 @@ def open_file(name, mode=None, driver=None, libver=None, userblock_size=None, **
         fcpl.set_link_creation_order(h5p.CRT_ORDER_TRACKED | h5p.CRT_ORDER_INDEXED)
     except AttributeError:
         # older version of h5py
-        fp = files.File(name, mode=mode, driver=driver, libver=libver, **kwargs)
+        fp = File(name, mode=mode, driver=driver, libver=libver, **kwargs)
     else:
-        if StrictVersion(h5py_version) >= StrictVersion("2.9"):
-            kwargs.update(rdcc_nslots=None, rdcc_nbytes=None, rdcc_w0=None)
-        fapl = files.make_fapl(driver, libver, **kwargs)
-        fp = files.File(files.make_fid(name, mode, userblock_size, fapl, fcpl))
+        posargs = []
+        if StrictVersion(h5py_version) >= StrictVersion('2.9'):
+            posargs += ['rdcc_nslots', 'rdcc_nbytes', 'rdcc_w0']
+        if StrictVersion(h5py_version) >= StrictVersion('3.5'):
+            posargs += ['locking', 'page_buf_size', 'min_meta_keep', 'min_raw_keep']
+        kwargs.update({arg: kwargs.get(arg, None) for arg in posargs})
+        fapl = _files.make_fapl(driver, libver, **kwargs)
+        fid = _files.make_fid(name, mode, userblock_size, fapl, fcpl=fcpl,
+                              swmr=kwargs.get('swmr', False))
+        fp = File(fid)
 
     if not exists and fp.mode == "r+":
         set_attributes(
