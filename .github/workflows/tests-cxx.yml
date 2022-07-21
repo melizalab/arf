@@ -1,0 +1,16 @@
+name: Python tests
+
+on: [push, pull_request]
+
+jobs:
+  cxx:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install libraries
+      run: |
+        sudo apt-get install libhdf5-serial-dev libboost-dev
+    - name: make test
+      run: make test
+    - name: test
+      run: tests/test_arf

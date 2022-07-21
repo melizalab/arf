@@ -1,4 +1,4 @@
-name: Python and C++ tests
+name: Python tests
 
 on: [push, pull_request]
 
@@ -15,9 +15,6 @@ jobs:
         uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install libraries
-        run: |
-          sudo apt-get install libhdf5-serial-dev
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
