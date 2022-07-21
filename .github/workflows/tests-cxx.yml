@@ -1,4 +1,4 @@
-name: Python tests
+name: C++ tests
 
 on: [push, pull_request]
 
