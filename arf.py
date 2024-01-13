@@ -3,6 +3,8 @@
 This is ARF, a python library for storing and accessing audio and ephys data in
 HDF5 containers.
 """
+from pathlib import Path
+from typing import Union
 
 spec_version = "2.1"
 __version__ = version = "2.6.5"
@@ -44,7 +46,14 @@ class DataTypes:
         return getattr(cls, s.upper(), None)
 
 
-def open_file(name, mode=None, driver=None, libver=None, userblock_size=None, **kwargs):
+def open_file(
+    path: Union[Path, str],
+    mode=None,
+    driver=None,
+    libver=None,
+    userblock_size=None,
+    **kwargs,
+):
     """Open an ARF file, creating as necessary.
 
     Use this instead of h5py.File to ensure that root-level attributes and group
@@ -61,20 +70,14 @@ def open_file(name, mode=None, driver=None, libver=None, userblock_size=None, **
     from h5py._hl import files as _files
     from h5py.version import version as h5py_version
 
-    try:
-        # If the byte string doesn't match the default
-        # encoding, just pass it on as-is.  Note Unicode
-        # objects can always be encoded.
-        name = name.encode(sys.getfilesystemencoding())
-    except (UnicodeError, LookupError):
-        pass
-    exists = os.path.exists(name)
+    path = Path(path)
+    exists = path.exists()
     try:
         fcpl = h5p.create(h5p.FILE_CREATE)
         fcpl.set_link_creation_order(h5p.CRT_ORDER_TRACKED | h5p.CRT_ORDER_INDEXED)
     except AttributeError:
         # older version of h5py
-        fp = File(name, mode=mode, driver=driver, libver=libver, **kwargs)
+        fp = File(path, mode=mode, driver=driver, libver=libver, **kwargs)
     else:
         posargs = []
         if Version(h5py_version) >= Version("2.9"):
@@ -94,7 +97,12 @@ def open_file(name, mode=None, driver=None, libver=None, userblock_size=None, **
         kwargs.update({arg: kwargs.get(arg, None) for arg in posargs})
         fapl = _files.make_fapl(driver, libver, **kwargs)
         fid = _files.make_fid(
-            name, mode, userblock_size, fapl, fcpl=fcpl, swmr=kwargs.get("swmr", False)
+            bytes(path),
+            mode,
+            userblock_size,
+            fapl,
+            fcpl=fcpl,
+            swmr=kwargs.get("swmr", False),
         )
         fp = File(fid)
 

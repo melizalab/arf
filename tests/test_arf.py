@@ -1,7 +1,7 @@
 # -*- mode: python -*-
 
+import pytest
 import time
-import unittest
 from packaging import version
 
 import numpy as nx
@@ -91,133 +91,143 @@ bad_datasets = [
 ]
 
 
-class TestArfCreation(unittest.TestCase):
-    def setUp(self):
-        self.fp = arf.open_file("test", "w", driver="core", backing_store=False)
-        self.entry = arf.create_entry(self.fp, "entry", tstamp)
-        self.dataset = arf.create_dataset(self.entry, **datasets[2])
+@pytest.fixture
+def test_file(tmp_path):
+    path = tmp_path / "test"
+    fp = arf.open_file(path, "w", driver="core", backing_store=False)
+    yield fp
+    fp.close()
 
-    def tearDown(self):
-        self.fp.close()
 
-    def create_entry(self, name):
-        g = arf.create_entry(self.fp, name, tstamp, **entry_attributes)
-        self.assertTrue(name in self.fp)
-        self.assertTrue(arf.is_entry(g))
-        self.assertTrue(arf.timestamp_to_float(g.attrs["timestamp"]) > 0)
+@pytest.fixture
+def test_entry(test_file):
+    return arf.create_entry(test_file, "entry", tstamp)
+
+
+@pytest.fixture
+def test_dataset(test_entry):
+    return arf.create_dataset(self.entry, **datasets[2])
+
+
+def test00_create_entries(test_file):
+    N = 5
+    for i in range(N):
+        name = entry_base % i
+        g = arf.create_entry(test_file, name, tstamp, **entry_attributes)
+        assert name in test_file
+        assert arf.is_entry(g)
+        assert arf.timestamp_to_float(g.attrs["timestamp"]) > 0
         for k in entry_attributes:
-            self.assertTrue(k in g.attrs)
-
-    def create_dataset(self, g, dset):
-        d = arf.create_dataset(g, **dset)
-        self.assertEqual(d.shape, dset["data"].shape)
-        self.assertFalse(arf.is_entry(d))
-
-    def test00_create_entries(self):
-        N = 5
-        for i in range(N):
-            yield self.create_entry, entry_base % i
-        assert len(self.fp) == N
-
-    def test01_create_existing_entry(self):
-        with self.assertRaises(ValueError):
-            arf.create_entry(self.fp, "entry", tstamp, **entry_attributes)
-
-    def test02_create_datasets(self):
-        for dset in datasets:
-            yield self.create_dataset, self.entry, dset
-        self.assertEqual(len(self.entry), len(datasets))
-        self.assertEqual(set(self.entry.keys()), set(dset["name"] for dset in datasets))
-
-    def test04_create_bad_dataset(self):
-        for dset in bad_datasets:
-            with self.assertRaises(ValueError):
-                self.create_dataset(self.entry, dset)
-
-    def test05_set_attributes(self):
-        """tests the set_attributes convenience function"""
-        arf.set_attributes(self.entry, mystr="myvalue", myint=5000)
-        self.assertEqual(self.entry.attrs["myint"], 5000)
-        self.assertEqual(self.entry.attrs["mystr"], "myvalue")
-        arf.set_attributes(self.entry, mystr=None)
-        self.assertFalse("mystr" in self.entry.attrs)
-
-    def test06_null_uuid(self):
-        # nulls in a uuid can make various things barf
-        from uuid import UUID
-
-        uuid = UUID(bytes=b"".rjust(16, b"\0"))
-        arf.set_uuid(self.entry, uuid)
-        self.assertEqual(arf.get_uuid(self.entry), uuid)
-
-    def test07_copy_entry_with_attrs(self):
-        src_entry_attrs = dict(self.entry.attrs)
-        src_entry_timestamp = src_entry_attrs.pop("timestamp")
-        tgt_entry = arf.create_entry(
-            self.fp, "copied_entry", src_entry_timestamp, **src_entry_attrs
-        )
-        self.assertEqual(self.entry.attrs["uuid"], tgt_entry.attrs["uuid"])
-
-    def test08_check_file_version(self):
-        arf.check_file_version(self.fp)
-
-    def test09_append_to_table(self):
-        dtype = nx.dtype({"names": ("f1", "f2"), "formats": [nx.uint, nx.int32]})
-        dset = arf.create_table(self.fp, "test", dtype=dtype)
-        self.assertEqual(dset.shape[0], 0)
-        arf.append_data(dset, (5, 10))
-        self.assertEqual(dset.shape[0], 1)
+            assert k in g.attrs
+    assert len(test_file) == N
 
 
-@unittest.skipIf(
+def test01_create_existing_entry(test_file, test_entry):
+    with pytest.raises(ValueError):
+        arf.create_entry(test_file, "entry", tstamp, **entry_attributes)
+
+
+def test02_create_datasets(test_entry):
+    for dset in datasets:
+        d = arf.create_dataset(test_entry, **dset)
+        assert d.shape == dset["data"].shape
+        assert not arf.is_entry(d)
+    assert len(test_entry) == len(datasets)
+    assert set(test_entry.keys()) == set(dset["name"] for dset in datasets)
+
+
+def test04_create_bad_dataset(test_entry):
+    for dset in bad_datasets:
+        with pytest.raises(ValueError):
+            d = arf.create_dataset(test_entry, **dset)
+
+
+def test05_set_attributes(test_entry):
+    """tests the set_attributes convenience function"""
+    arf.set_attributes(test_entry, mystr="myvalue", myint=5000)
+    assert test_entry.attrs["myint"] == 5000
+    assert test_entry.attrs["mystr"] == "myvalue"
+    arf.set_attributes(test_entry, mystr=None)
+    assert not "mystr" in test_entry.attrs
+
+
+def test06_null_uuid(test_entry):
+    # nulls in a uuid can make various things barf
+    from uuid import UUID
+
+    uuid = UUID(bytes=b"".rjust(16, b"\0"))
+    arf.set_uuid(test_entry, uuid)
+    assert arf.get_uuid(test_entry) == uuid
+
+
+def test07_copy_entry_with_attrs(test_file, test_entry):
+    src_entry_attrs = dict(test_entry.attrs)
+    src_entry_timestamp = src_entry_attrs.pop("timestamp")
+    tgt_entry = arf.create_entry(
+        test_file, "copied_entry", src_entry_timestamp, **src_entry_attrs
+    )
+    assert test_entry.attrs["uuid"] == tgt_entry.attrs["uuid"]
+
+
+def test08_check_file_version(test_file):
+    arf.check_file_version(test_file)
+
+
+def test09_append_to_table(test_file):
+    dtype = nx.dtype({"names": ("f1", "f2"), "formats": [nx.uint, nx.int32]})
+    dset = arf.create_table(test_file, "test", dtype=dtype)
+    assert dset.shape[0] == 0
+    arf.append_data(dset, (5, 10))
+    assert dset.shape[0] == 1
+
+
+@pytest.mark.skipif(
     version.Version(h5py_version) < version.Version("2.2"),
-    "not supported on h5py < 2.2",
+    reason="not supported on h5py < 2.2",
 )
-class TestArfNavigation(unittest.TestCase):
-    def setUp(self):
-        self.fp = arf.open_file("test", "w", driver="core", backing_store=False)
-
-    def tearDown(self):
-        self.fp.close()
-
-    def test01_creation_iter(self):
-        self.fp = arf.open_file("test06", mode="a", driver="core", backing_store=False)
-        entry_names = ["z", "y", "a", "q", "zzyfij"]
-        for name in entry_names:
-            g = arf.create_entry(self.fp, name, 0)
-            arf.create_dataset(g, "dset", (1,), sampling_rate=1)
-        self.assertEqual(list(arf.keys_by_creation(self.fp)), entry_names)
-
-    def test10_select_from_timeseries(self):
-        entry = arf.create_entry(self.fp, "entry", tstamp)
-        for data in datasets:
-            arf.create_dataset(entry, **data)
-            dset = entry[data["name"]]
-            if data.get("units", None) == "samples":
-                selected, offset = arf.select_interval(dset, 0, data["sampling_rate"])
-            else:
-                selected, offset = arf.select_interval(dset, 0.0, 1.0)
-            if arf.is_time_series(dset):
-                nx.testing.assert_array_equal(
-                    selected, data["data"][: data["sampling_rate"]]
-                )
+def test01_creation_iter(test_file):
+    # self.fp = arf.open_file("test06", mode="a", driver="core", backing_store=False)
+    entry_names = ["z", "y", "a", "q", "zzyfij"]
+    for name in entry_names:
+        g = arf.create_entry(test_file, name, 0)
+        arf.create_dataset(g, "dset", (1,), sampling_rate=1)
+    assert list(arf.keys_by_creation(test_file)) == entry_names
 
 
-class TestArfUtility(unittest.TestCase):
-    def test01_timestamp_conversion(self):
-        from datetime import datetime
+@pytest.mark.skipif(
+    version.Version(h5py_version) < version.Version("2.2"),
+    reason="not supported on h5py < 2.2",
+)
+def test10_select_from_timeseries(test_file):
+    entry = arf.create_entry(test_file, "entry", tstamp)
+    for data in datasets:
+        arf.create_dataset(entry, **data)
+        dset = entry[data["name"]]
+        if data.get("units", None) == "samples":
+            selected, offset = arf.select_interval(dset, 0, data["sampling_rate"])
+        else:
+            selected, offset = arf.select_interval(dset, 0.0, 1.0)
+        if arf.is_time_series(dset):
+            nx.testing.assert_array_equal(
+                selected, data["data"][: data["sampling_rate"]]
+            )
 
-        dt = datetime.now()
-        ts = arf.convert_timestamp(dt)
-        self.assertEqual(arf.timestamp_to_datetime(ts), dt)
-        self.assertTrue(all(arf.convert_timestamp(ts) == ts))
-        ts = arf.convert_timestamp(1000)
-        self.assertEqual(int(arf.timestamp_to_float(ts)), 1000)
 
-    def test99_various(self):
-        # test some functions difficult to cover otherwise
-        arf.DataTypes._doc()
-        arf.DataTypes._todict()
+def test01_timestamp_conversion():
+    from datetime import datetime
+
+    dt = datetime.now()
+    ts = arf.convert_timestamp(dt)
+    assert arf.timestamp_to_datetime(ts) == dt
+    assert all(arf.convert_timestamp(ts) == ts)
+    ts = arf.convert_timestamp(1000)
+    assert int(arf.timestamp_to_float(ts)) == 1000
+
+
+def test99_various():
+    # test some functions difficult to cover otherwise
+    arf.DataTypes._doc()
+    arf.DataTypes._todict()
 
 
 # # Variables:
