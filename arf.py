@@ -1,28 +1,22 @@
-# -*- coding: utf-8 -*-
 # -*- mode: python -*-
 """
 This is ARF, a python library for storing and accessing audio and ephys data in
 HDF5 containers.
 """
-from __future__ import division
-from __future__ import unicode_literals
 
 spec_version = "2.1"
-__version__ = version = "2.6.4"
+__version__ = version = "2.6.5"
 
 
 def version_info():
-    from h5py.version import version as h5py_version, hdf5_version
+    from h5py.version import hdf5_version
+    from h5py.version import version as h5py_version
 
-    return "Library versions:\n arf: %s\n h5py: %s\n HDF5: %s" % (
-        __version__,
-        h5py_version,
-        hdf5_version,
-    )
+    return f"Library versions:\n arf: {__version__}\n h5py: {h5py_version}\n HDF5: {hdf5_version}"
 
 
 class DataTypes:
-    """Available data types, by name and integer code: """
+    """Available data types, by name and integer code:"""
 
     UNDEFINED, ACOUSTIC, EXTRAC_HP, EXTRAC_LF, EXTRAC_EEG, INTRAC_CC, INTRAC_VC = range(
         0, 7
@@ -39,14 +33,14 @@ class DataTypes:
 
     @classmethod
     def _todict(cls):
-        """ generate a dict keyed by value """
+        """generate a dict keyed by value"""
         return dict(
             (getattr(cls, attr), attr) for attr in dir(cls) if not attr.startswith("_")
         )
 
     @classmethod
     def _fromstring(cls, s):
-        """ look up datatype by string; returns None if not defined """
+        """look up datatype by string; returns None if not defined"""
         return getattr(cls, s.upper(), None)
 
 
@@ -57,13 +51,15 @@ def open_file(name, mode=None, driver=None, libver=None, userblock_size=None, **
     creation property lists are set correctly.
 
     """
-    import sys
     import os
-    from h5py.version import version as h5py_version
+    import sys
     from distutils.version import StrictVersion
-    from h5py import h5p, File
+
+    from h5py import File, h5p
+
     # Caution: This is a private API of h5py, subject to change without notice
     from h5py._hl import files as _files
+    from h5py.version import version as h5py_version
 
     try:
         # If the byte string doesn't match the default
@@ -81,19 +77,25 @@ def open_file(name, mode=None, driver=None, libver=None, userblock_size=None, **
         fp = File(name, mode=mode, driver=driver, libver=libver, **kwargs)
     else:
         posargs = []
-        if StrictVersion(h5py_version) >= StrictVersion('2.9'):
-            posargs += ['rdcc_nslots', 'rdcc_nbytes', 'rdcc_w0']
-        if StrictVersion(h5py_version) >= StrictVersion('3.5'):
-            posargs += ['locking', 'page_buf_size', 'min_meta_keep', 'min_raw_keep']
-        if StrictVersion(h5py_version) >= StrictVersion('3.7'):
+        if StrictVersion(h5py_version) >= StrictVersion("2.9"):
+            posargs += ["rdcc_nslots", "rdcc_nbytes", "rdcc_w0"]
+        if StrictVersion(h5py_version) >= StrictVersion("3.5"):
+            posargs += ["locking", "page_buf_size", "min_meta_keep", "min_raw_keep"]
+        if StrictVersion(h5py_version) >= StrictVersion("3.7"):
             # integer is needed
-            kwargs.update({arg: kwargs.get(arg, 1) for arg in ['alignment_threshold', 'alignment_interval']})
-        if StrictVersion(h5py_version) >= StrictVersion('3.8'):
-            posargs += ['meta_block_size']
+            kwargs.update(
+                {
+                    arg: kwargs.get(arg, 1)
+                    for arg in ["alignment_threshold", "alignment_interval"]
+                }
+            )
+        if StrictVersion(h5py_version) >= StrictVersion("3.8"):
+            posargs += ["meta_block_size"]
         kwargs.update({arg: kwargs.get(arg, None) for arg in posargs})
         fapl = _files.make_fapl(driver, libver, **kwargs)
-        fid = _files.make_fid(name, mode, userblock_size, fapl, fcpl=fcpl,
-                              swmr=kwargs.get('swmr', False))
+        fid = _files.make_fid(
+            name, mode, userblock_size, fapl, fcpl=fcpl, swmr=kwargs.get("swmr", False)
+        )
         fp = File(fid)
 
     if not exists and fp.mode == "r+":
@@ -126,7 +128,7 @@ def create_entry(group, name, timestamp, **attributes):
 
     """
     # create group using low-level interface to store creation order
-    from h5py import h5p, h5g, _hl
+    from h5py import _hl, h5g, h5p
 
     try:
         gcpl = h5p.create(h5p.GROUP_CREATE)
@@ -150,7 +152,7 @@ def create_dataset(
     chunks=True,
     maxshape=None,
     compression=None,
-    **attributes
+    **attributes,
 ):
     """Create an ARF dataset under group, setting required attributes
 
@@ -283,11 +285,11 @@ def check_file_version(file):
         ver = file.attrs.get("arf_version", None)
         if ver is None:
             ver = file.attrs["arf_library_version"]
-    except KeyError:
+    except KeyError as err:
         raise UserWarning(
-            "Unable to determine ARF version for {0.filename};"
-            "created by another program?".format(file)
-        )
+            f"Unable to determine ARF version for {file.filename};"
+            "created by another program?"
+        ) from err
     try:
         # if the attribute is stored as a string, it's ascii-encoded
         ver = ver.decode("ascii")
@@ -297,13 +299,13 @@ def check_file_version(file):
     file_version = Version(ver)
     if file_version < Version("1.1"):
         raise DeprecationWarning(
-            "ARF library {} may have trouble reading file "
-            "version {} (< 1.1)".format(version, file_version)
+            f"ARF library {version} may have trouble reading file "
+            f"version {file_version} (< 1.1)"
         )
     elif file_version >= Version("3.0"):
         raise FutureWarning(
-            "ARF library {} may be incompatible with file "
-            "version {} (>= 3.0)".format(version, file_version)
+            f"ARF library {version} may be incompatible with file "
+            f"version {file_version} (>= 3.0)"
         )
     return file_version
 
@@ -364,6 +366,7 @@ def convert_timestamp(obj):
     import numbers
     from datetime import datetime
     from time import mktime, struct_time
+
     from numpy import zeros
 
     out = zeros(2, dtype="int64")
@@ -380,8 +383,8 @@ def convert_timestamp(obj):
     else:
         try:
             out[:2] = obj[:2]
-        except:
-            raise TypeError("unable to convert %s to timestamp" % obj)
+        except IndexError as err:
+            raise TypeError("unable to convert %s to timestamp" % obj) from err
     return out
 
 
@@ -394,13 +397,13 @@ def timestamp_to_datetime(timestamp):
 
 
 def timestamp_to_float(timestamp):
-    """Convert an ARF timestamp to a floating point (sec since epoch) """
+    """Convert an ARF timestamp to a floating point (sec since epoch)"""
     return sum(t1 * t2 for t1, t2 in zip(timestamp, (1.0, 1e-6)))
 
 
 def set_uuid(obj, uuid=None):
-    """Set the uuid attribute of an HDF5 object. Use this method to ensure correct dtype """
-    from uuid import uuid4, UUID
+    """Set the uuid attribute of an HDF5 object. Use this method to ensure correct dtype"""
+    from uuid import UUID, uuid4
 
     if uuid is None:
         uuid = uuid4()
@@ -465,7 +468,7 @@ def is_entry(obj):
 
 
 def count_channels(dset):
-    """Return the number of channels (columns) in dset """
+    """Return the number of channels (columns) in dset"""
     try:
         return dset.shape[1]
     except IndexError:

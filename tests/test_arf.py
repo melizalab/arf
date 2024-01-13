@@ -1,14 +1,14 @@
-# -*- coding: utf-8 -*-
 # -*- mode: python -*-
 
+import time
 import unittest
 from distutils import version
-from h5py.version import version as h5py_version
 
 import numpy as nx
+from h5py.version import version as h5py_version
+from numpy.random import randint, randn
+
 import arf
-import time
-from numpy.random import randn, randint
 
 entry_base = "entry_%03d"
 tstamp = time.mktime(time.localtime())
