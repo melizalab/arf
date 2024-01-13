@@ -1,12 +1,12 @@
 # -*- mode: python -*-
 
-import pytest
 import time
-from packaging import version
 
 import numpy as nx
+import pytest
 from h5py.version import version as h5py_version
 from numpy.random import randint, randn
+from packaging import version
 
 import arf
 
@@ -106,7 +106,7 @@ def test_entry(test_file):
 
 @pytest.fixture
 def test_dataset(test_entry):
-    return arf.create_dataset(self.entry, **datasets[2])
+    return arf.create_dataset(test_entry, **datasets[2])
 
 
 def test00_create_entries(test_file):
@@ -139,7 +139,7 @@ def test02_create_datasets(test_entry):
 def test04_create_bad_dataset(test_entry):
     for dset in bad_datasets:
         with pytest.raises(ValueError):
-            d = arf.create_dataset(test_entry, **dset)
+            _ = arf.create_dataset(test_entry, **dset)
 
 
 def test05_set_attributes(test_entry):
@@ -148,7 +148,7 @@ def test05_set_attributes(test_entry):
     assert test_entry.attrs["myint"] == 5000
     assert test_entry.attrs["mystr"] == "myvalue"
     arf.set_attributes(test_entry, mystr=None)
-    assert not "mystr" in test_entry.attrs
+    assert "mystr" not in test_entry.attrs
 
 
 def test06_null_uuid(test_entry):

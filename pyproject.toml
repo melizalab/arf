@@ -12,3 +12,6 @@ extend-select = [
   "RUF", # Ruff-specific
   "UP",  # pyupgrade
 ]
+
+[tool.mypy]
+ignore_missing_imports = true
