@@ -153,6 +153,8 @@ open data formats
    complex, but it does seem to be achieving growing adoption.
 -  `pandora <https://github.com/G-Node/pandora>`__ is also under active
    development
+-  `bark <https://github.com/margoliashlab/bark>`__ is inspired by ARF
+   but uses the filesystem directory structure instead of HDF5.
 
 i/o libraries
 ^^^^^^^^^^^^^
