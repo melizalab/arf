@@ -19,7 +19,7 @@ ArfTimeStamp = np.ndarray
 Datashape = Tuple[int, ...]
 
 spec_version = "2.1"
-__version__ = version = "2.6.5"
+__version__ = version = "2.6.6"
 
 
 def version_info():
@@ -397,13 +397,11 @@ def convert_timestamp(obj: Timestamp) -> ArfTimeStamp:
     elif isinstance(obj, numbers.Real):
         out[0] = obj
         out[1] = (obj - out[0]) * 1e6
-    elif isinstance(obj, tuple):
+    else:
         try:
             out[:2] = obj[:2]
         except IndexError as err:
-            raise TypeError("tuple timestamp needs two elements") from err
-    else:
-        raise TypeError(f"unable to convert {obj} to timestamp")
+            raise TypeError(f"unable to convert {obj} to timestamp") from err
     return out
 
 
