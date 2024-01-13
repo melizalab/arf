@@ -2,7 +2,7 @@
 
 import time
 import unittest
-from distutils import version
+from packaging import version
 
 import numpy as nx
 from h5py.version import version as h5py_version
@@ -30,7 +30,7 @@ datasets = [
     ),
     dict(
         name="neural",
-        data=(randn(100000) * 2 ** 16).astype("h"),
+        data=(randn(100000) * 2**16).astype("h"),
         sampling_rate=20000,
         datatype=arf.DataTypes.EXTRAC_HP,
         compression=9,
@@ -117,7 +117,7 @@ class TestArfCreation(unittest.TestCase):
         N = 5
         for i in range(N):
             yield self.create_entry, entry_base % i
-        self.assertEqual(len(self.fp), N)
+        assert len(self.fp) == N
 
     def test01_create_existing_entry(self):
         with self.assertRaises(ValueError):
@@ -135,7 +135,7 @@ class TestArfCreation(unittest.TestCase):
                 self.create_dataset(self.entry, dset)
 
     def test05_set_attributes(self):
-        """ tests the set_attributes convenience function """
+        """tests the set_attributes convenience function"""
         arf.set_attributes(self.entry, mystr="myvalue", myint=5000)
         self.assertEqual(self.entry.attrs["myint"], 5000)
         self.assertEqual(self.entry.attrs["mystr"], "myvalue")
@@ -170,7 +170,7 @@ class TestArfCreation(unittest.TestCase):
 
 
 @unittest.skipIf(
-    version.StrictVersion(h5py_version) < version.StrictVersion("2.2"),
+    version.Version(h5py_version) < version.Version("2.2"),
     "not supported on h5py < 2.2",
 )
 class TestArfNavigation(unittest.TestCase):

@@ -53,7 +53,7 @@ def open_file(name, mode=None, driver=None, libver=None, userblock_size=None, **
     """
     import os
     import sys
-    from distutils.version import StrictVersion
+    from packaging.version import Version
 
     from h5py import File, h5p
 
@@ -77,11 +77,11 @@ def open_file(name, mode=None, driver=None, libver=None, userblock_size=None, **
         fp = File(name, mode=mode, driver=driver, libver=libver, **kwargs)
     else:
         posargs = []
-        if StrictVersion(h5py_version) >= StrictVersion("2.9"):
+        if Version(h5py_version) >= Version("2.9"):
             posargs += ["rdcc_nslots", "rdcc_nbytes", "rdcc_w0"]
-        if StrictVersion(h5py_version) >= StrictVersion("3.5"):
+        if Version(h5py_version) >= Version("3.5"):
             posargs += ["locking", "page_buf_size", "min_meta_keep", "min_raw_keep"]
-        if StrictVersion(h5py_version) >= StrictVersion("3.7"):
+        if Version(h5py_version) >= Version("3.7"):
             # integer is needed
             kwargs.update(
                 {
@@ -89,7 +89,7 @@ def open_file(name, mode=None, driver=None, libver=None, userblock_size=None, **
                     for arg in ["alignment_threshold", "alignment_interval"]
                 }
             )
-        if StrictVersion(h5py_version) >= StrictVersion("3.8"):
+        if Version(h5py_version) >= Version("3.8"):
             posargs += ["meta_block_size"]
         kwargs.update({arg: kwargs.get(arg, None) for arg in posargs})
         fapl = _files.make_fapl(driver, libver, **kwargs)
@@ -279,7 +279,7 @@ def check_file_version(file):
     Returns the version for the file
 
     """
-    from distutils.version import StrictVersion as Version
+    from packaging.version import Version
 
     try:
         ver = file.attrs.get("arf_version", None)
