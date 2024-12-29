@@ -1,14 +1,12 @@
 # -*- mode: python -*-
 
 import time
+from uuid import UUID, uuid4
 
+import h5py as h5
 import numpy as np
 import pytest
-import h5py as h5
-from h5py.version import version as h5py_version
 from numpy.random import randint, randn
-from packaging import version
-from uuid import UUID, uuid4
 
 import arf
 
@@ -41,7 +39,7 @@ datasets = [
         name="multichannel",
         data=randn(10000, 2),
         sampling_rate=20000,
-        datatype=arf.DataTypes.ACOUSTIC
+        datatype=arf.DataTypes.ACOUSTIC,
     ),
     dict(
         name="spikes",
@@ -123,7 +121,7 @@ def read_only_file(tmp_path):
     fp = arf.open_file(path, "w")
     entry = arf.create_entry(fp, "entry", tstamp)
     for dset in datasets:
-        d = arf.create_dataset(entry, **dset)
+        _ = arf.create_dataset(entry, **dset)
     fp.close()
     return arf.open_file(path, "r")
 
@@ -152,7 +150,8 @@ def test_channel_counts(read_only_file):
     assert arf.count_channels(dset1) == 1
     dset2 = read_only_file["/entry/multichannel"]
     assert arf.count_channels(dset2) == 2
-    
+
+
 def test_create_entries(tmp_file):
     N = 5
     for i in range(N):
@@ -194,12 +193,13 @@ def test_set_null_uuid(tmp_entry):
     arf.set_uuid(tmp_entry, uuid)
     assert arf.get_uuid(tmp_entry) == uuid
 
+
 def test_get_null_uuid(tmp_entry):
     uuid = UUID(bytes=b"".rjust(16, b"\0"))
     del tmp_entry.attrs["uuid"]
     assert arf.get_uuid(tmp_entry) == uuid
 
-    
+
 def test_set_uuid_with_bytes(tmp_entry):
     uuid = uuid4()
     arf.set_uuid(tmp_entry, uuid.bytes)
@@ -226,11 +226,13 @@ def test_append_to_table(tmp_file):
     arf.append_data(dset, (5, 10))
     assert dset.shape[0] == 1
 
+
 def test_append_nothing(tmp_file):
     data = np.random.randn(100)
     dset = arf.create_dataset(tmp_file, "test", data=data, sampling_rate=1)
     arf.append_data(dset, np.random.randn(0))
     assert dset.shape == data.shape
+
 
 def test_creation_iter(tmp_file):
     # self.fp = arf.open_file("test06", mode="a", driver="core", backing_store=False)
@@ -276,8 +278,10 @@ def test_various():
     arf.DataTypes._doc()
     arf.DataTypes._todict()
 
+
 def test_datatype_from_string():
     assert arf.DataTypes._fromstring("undefined") == arf.DataTypes.UNDEFINED
+
 
 # # Variables:
 # # End:
