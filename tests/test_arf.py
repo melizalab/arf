@@ -130,6 +130,7 @@ def test_created_datasets(read_only_file):
     tmp_entry = read_only_file["/entry"]
     assert len(tmp_entry) == len(datasets)
     assert set(tmp_entry.keys()) == set(dset["name"] for dset in datasets)
+    # this will fail if iteration is not in order of creation
     for dset, d in zip(datasets, tmp_entry.values(), strict=True):
         assert d.shape == dset["data"].shape
         assert not arf.is_entry(d)
@@ -153,16 +154,17 @@ def test_channel_counts(read_only_file):
 
 
 def test_create_entries(tmp_file):
-    N = 5
-    for i in range(N):
-        name = entry_base % i
+    names = [str(uuid4()).split("-")[0] for _ in range(5)]
+    for name in names:
         g = arf.create_entry(tmp_file, name, tstamp, **entry_attributes)
         assert name in tmp_file
         assert arf.is_entry(g)
         assert arf.timestamp_to_float(g.attrs["timestamp"]) > 0
         for k in entry_attributes:
             assert k in g.attrs
-    assert len(tmp_file) == N
+    assert len(tmp_file) == len(names)
+    # this will fail if creation order is not tracked
+    assert list(tmp_file.keys()) == names
 
 
 def test_create_existing_entry(tmp_file, tmp_entry):

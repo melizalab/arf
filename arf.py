@@ -19,7 +19,7 @@ ArfTimeStamp = np.ndarray
 Datashape = Tuple[int, ...]
 
 spec_version = "2.1"
-__version__ = "2.6.7"
+__version__ = "2.7.0"
 version = __version__
 
 
@@ -147,17 +147,7 @@ def create_entry(
     Returns: newly created entry object
 
     """
-    # create group using low-level interface to store creation order
-    from h5py import _hl, h5g, h5p
-
-    try:
-        gcpl = h5p.create(h5p.GROUP_CREATE)
-        gcpl.set_link_creation_order(h5p.CRT_ORDER_TRACKED | h5p.CRT_ORDER_INDEXED)
-    except AttributeError:
-        grp = group.create_group(name)
-    else:
-        name, lcpl = group._e(name, lcpl=True)
-        grp = _hl.group.Group(h5g.create(group.id, name, lcpl=lcpl, gcpl=gcpl))
+    grp = group.create_group(name, track_order=True)
     set_uuid(grp, attributes.pop("uuid", None))
     set_attributes(grp, timestamp=convert_timestamp(timestamp), **attributes)
     return grp
