@@ -401,7 +401,7 @@ def convert_timestamp(obj: Timestamp) -> ArfTimeStamp:
     else:
         try:
             out[:2] = obj[:2]
-        except IndexError as err:
+        except (IndexError, ValueError) as err:
             raise TypeError(f"unable to convert {obj} to timestamp") from err
     return out
 
@@ -439,18 +439,11 @@ def set_uuid(obj: h5.HLObject, uuid: Union[str, bytes, UUID, None] = None):
 def get_uuid(obj: h5.HLObject) -> UUID:
     """Return the uuid for obj, or null uuid if none is set"""
     # TODO: deprecate null uuid ret val
-    from uuid import UUID
-
     try:
         uuid = obj.attrs["uuid"]
     except KeyError:
         return UUID(int=0)
-    # convert to unicode for python 3
-    try:
-        uuid = uuid.decode("ascii")
-    except (LookupError, AttributeError):
-        pass
-    return UUID(uuid)
+    return UUID(uuid.decode("ascii"))
 
 
 def count_children(obj: h5.HLObject, type=None) -> int:
