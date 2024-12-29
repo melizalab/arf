@@ -9,6 +9,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Install libraries
       run: |
+        sudo apt-get update
         sudo apt-get install libhdf5-serial-dev libboost-dev
     - name: make test
       run: make test
