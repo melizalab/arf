@@ -19,7 +19,8 @@ ArfTimeStamp = np.ndarray
 Datashape = Tuple[int, ...]
 
 spec_version = "2.1"
-__version__ = version = "2.6.7"
+__version__ = "2.6.7"
+version = __version__
 
 
 def version_info():

@@ -1,18 +1,95 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.ruff]
-target-version = "py37"
-
-[tool.ruff.lint]
-extend-select = [
-  "B",   # flake8-bugbear
-  "I",   # isort
-  "PGH", # pygrep-hooks
-  "RUF", # Ruff-specific
-  "UP",  # pyupgrade
-  "NPY201", # numpy 2.0
+[project]
+name = "arf"
+dynamic = ["version"]
+description = "Advanced Recording Format for acoustic, behavioral, and physiological data"
+readme = "README.rst"
+requires-python = ">=3.7"
+authors = [
+    {name = "Dan Meliza", email = "dan@meliza.org"},
+]
+maintainers = [
+    {name = "Dan Meliza", email = "dan@meliza.org"},
+]
+license = {text = "BSD 3-Clause License"}
+keywords = ["neuroscience", "data format"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: C++",
+    "Topic :: Scientific/Engineering",
+    "Operating System :: Unix",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Natural Language :: English",
+]
+dependencies = [
+    "h5py>=3.12.1; python_version >= '3.9'",
+    "numpy>=1.21.6; python_version == '3.7'",
+    "numpy>=1.23.2; python_version == '3.8'",
+    "numpy>=1.23.2; python_version == '3.9'",
+    "numpy>=1.23.2; python_version == '3.10'",
+    "numpy>=1.24.0; python_version == '3.11'",
+    "numpy>=1.26.0; python_version == '3.12'",
 ]
 
+[project.urls]
+Homepage = "https://github.com/melizalab/arf"
+
+[dependency-groups]
+dev = [
+    "pytest>=5.0",
+    "pytest-cov >= 4.1.0",
+    "ruff>=0.7.0",
+]
+
+[tool.hatch.version]
+path = "arf.py"
+
+[tool.pytest.ini_options]
+python_files = ["test_*.py", "*_test.py"]
+addopts = "-v --cov=arf --cov-report=term-missing"
+testpaths = ["tests"]
+
+[tool.black]
+line-length = 88
+target-version = ["py37"]
+include = '\.pyi?$'
+
+[tool.ruff]
+line-length = 88
+target-version = "py37"
+extend-exclude = ["build", "attic"]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+]
+ignore = ["E221", "E501", "E701"]
+
 [tool.mypy]
+python_version = "3.7"
 ignore_missing_imports = true
+strict_optional = true
+check_untyped_defs = true
+
+[tool.hatch.build]
+include = ["arf.py"]
+exclude = ["*test*"]
+artifacts = ["README.rst"]
