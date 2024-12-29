@@ -229,6 +229,8 @@ def test99_various():
     arf.DataTypes._doc()
     arf.DataTypes._todict()
 
+def test_datatype_from_string():
+    assert arf.DataTypes._fromstring("undefined") == arf.DataTypes.UNDEFINED
 
 # # Variables:
 # # End:
