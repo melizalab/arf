@@ -131,7 +131,7 @@ def test_created_datasets(read_only_file):
     assert len(tmp_entry) == len(datasets)
     assert set(tmp_entry.keys()) == set(dset["name"] for dset in datasets)
     # this will fail if iteration is not in order of creation
-    for dset, d in zip(datasets, tmp_entry.values(), strict=True):
+    for dset, d in zip(datasets, tmp_entry.values()):
         assert d.shape == dset["data"].shape
         assert not arf.is_entry(d)
 
