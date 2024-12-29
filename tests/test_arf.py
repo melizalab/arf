@@ -275,14 +275,8 @@ def test_timestamp_conversion():
         arf.convert_timestamp("blah blah")
 
 
-def test_various():
-    # test some functions difficult to cover otherwise
+def test_datatype_doc():
     arf.DataTypes._doc()
-    arf.DataTypes._todict()
-
-
-def test_datatype_from_string():
-    assert arf.DataTypes._fromstring("undefined") == arf.DataTypes.UNDEFINED
 
 
 # # Variables:

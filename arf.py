@@ -5,6 +5,7 @@ HDF5 containers.
 """
 import numbers
 from datetime import datetime
+from enum import IntEnum
 from pathlib import Path
 from time import mktime, struct_time
 from typing import Iterator, Optional, Tuple, Union
@@ -30,33 +31,30 @@ def version_info():
     return f"Library versions:\n arf: {__version__}\n h5py: {h5py_version}\n HDF5: {hdf5_version}"
 
 
-class DataTypes:
+class DataTypes(IntEnum):
     """Available data types, by name and integer code:"""
-
-    UNDEFINED, ACOUSTIC, EXTRAC_HP, EXTRAC_LF, EXTRAC_EEG, INTRAC_CC, INTRAC_VC = range(
-        0, 7
-    )
-    EVENT, SPIKET, BEHAVET = range(1000, 1003)
-    INTERVAL, STIMI, COMPONENTL = range(2000, 2003)
-
+    UNDEFINED = 0
+    ACOUSTIC = 1
+    EXTRAC_HP = 2
+    EXTRAC_LF = 3
+    EXTRAC_EEG = 4
+    INTRAC_CC = 5
+    INTRAC_VC = 6
+    
+    EVENT = 1000
+    SPIKET = 1001
+    BEHAVET = 1002
+    
+    INTERVAL = 2000
+    STIMI = 2001
+    COMPONENTL = 2002
+    
     @classmethod
     def _doc(cls):
         out = str(cls.__doc__)
-        for v, k in sorted(cls._todict().items()):
-            out += "\n%s:%d" % (k, v)
+        for dtype in cls:
+            out += f"\n{dtype.name}:{dtype.value}"
         return out
-
-    @classmethod
-    def _todict(cls):
-        """generate a dict keyed by value"""
-        return dict(
-            (getattr(cls, attr), attr) for attr in dir(cls) if not attr.startswith("_")
-        )
-
-    @classmethod
-    def _fromstring(cls, s):
-        """look up datatype by string; returns None if not defined"""
-        return getattr(cls, s.upper(), None)
 
 
 def open_file(
