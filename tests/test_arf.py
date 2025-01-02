@@ -275,9 +275,5 @@ def test_timestamp_conversion():
         arf.convert_timestamp("blah blah")
 
 
-def test_datatype_doc():
-    arf.DataTypes._doc()
-
-
 # # Variables:
 # # End:

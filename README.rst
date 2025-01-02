@@ -19,17 +19,17 @@ arf
 .. _PythonVersions: https://pypi.python.org/pypi/arf/
 
 
-The Advanced Recording Format `ARF <https://meliza.org/spec:1/arf/>`__
+The Advanced Recording Format `arf <https://meliza.org/spec:1/arf/>`__
 is an open standard for storing data from neuronal, acoustic, and
 behavioral experiments in a portable, high-performance, archival format.
 The goal is to enable labs to share data and tools, and to allow
 valuable data to be accessed and analyzed for many years in the future.
 
-**ARF** is built on the the `HDF5 <http://www.hdfgroup.org/HDF5/>`__
+**arf** is built on the the `HDF5 <http://www.hdfgroup.org/HDF5/>`__
 format, and all arf files are accessible through standard HDF5 tools,
 including interfaces to HDF5 written for other languages (e.g. MATLAB,
-Python, etc). **ARF** comprises a set of specifications on how different
-kinds of data are stored. The organization of ARF files is based around
+Python, etc). **arf** comprises a set of specifications on how different
+kinds of data are stored. The organization of arf files is based around
 the concept of an *entry*, a collection of data channels associated with
 a particular point in time. An entry might contain one or more of the
 following:
@@ -50,27 +50,20 @@ This repository contains:
 -  The specification for arf (in specification.md). This is also hosted
    at https://meliza.org/spec:1/arf/.
 -  A fast, type-safe C++ interface for reading and writing arf files
--  A python interface for reading and writing arf files (based on h5py).
+-  A python interface for reading and writing arf files
 
-contributing
-~~~~~~~~~~~~
-
-ARF is under active development and we welcome comments and
-contributions from neuroscientists and behavioral biologists interested
-in using it. We’re particularly interested in use cases that don’t fit
-the current specification. Please post issues or contact Dan Meliza (dan
-at meliza.org) directly.
-
-The MATLAB interface is out of date and could use some work.
+You don't need the python or C++ libraries to read arf files; they are just
+standard HDF5 files that can be accessed with standard tools and libraries, like
+h5py (see below).
 
 installation
 ~~~~~~~~~~~~
 
 ARF files require HDF5>=1.8 (http://www.hdfgroup.org/HDF5).
 
-The python interface requires Python 3.7 or greater, numpy>=1.19, and
-h5py>=2.10. The last version to support Python 2 was ``2.5.1``. To
-install the module:
+The python interface requires Python 3.7 or greater and h5py>=3.8. The last
+version of this package to support Python 2 was ``2.5.1``. The last version to
+support h5py 2 was ``2.6.7``. To install the module:
 
 .. code:: bash
 
@@ -99,15 +92,12 @@ specification but otherwise evolve independently. For example, the
 python ``arf`` package version ``2.1.0`` is compatible with any ARF
 version ``2.x``.
 
-There was no public release of ARF prior to ``2.0``.
+There was no public release of arf prior to ``2.0``.
 
 access ARF files with HDF5 tools
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This section describes how to inspect ARF files using standard tools, in
-the event that the interfaces described here cease to function.
-
-The structure of an ARF file can be explored using the ``h5ls`` tool.
+The structure of an arf file can be explored using the ``h5ls`` tool.
 For example, to list entries:
 
 .. code:: bash
@@ -139,6 +129,15 @@ PCM format):
 
    h5dump -d /test_0001/pcm -b LE -o test_0001.pcm file.arf
 
+contributing
+~~~~~~~~~~~~
+
+ARF is under active development and we welcome comments and
+contributions from neuroscientists and behavioral biologists interested
+in using it. We’re particularly interested in use cases that don’t fit
+the current specification. Please post issues or contact Dan Meliza (dan
+at meliza.org) directly.
+
 related projects
 ~~~~~~~~~~~~~~~~
 
@@ -150,11 +149,11 @@ open data formats
 
 -  `neurodata without borders <http://www.nwb.org>`__ has similar goals
    and also uses HDF5 for storage. The data schema is considerably more
-   complex, but it does seem to be achieving growing adoption.
--  `pandora <https://github.com/G-Node/pandora>`__ is also under active
-   development
+   complex and prescriptive, but it's got a lot of investment from the field,
+   so you should consider it first.
+-  `NIX <https://github.com/G-Node/nix>`__ was designed by INCF for sharing electrophysiology data.
 -  `bark <https://github.com/margoliashlab/bark>`__ is inspired by ARF
-   but uses the filesystem directory structure instead of HDF5.
+   but uses the filesystem directory structure instead of HDF5 to simplify data access.
 
 i/o libraries
 ^^^^^^^^^^^^^

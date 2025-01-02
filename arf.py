@@ -49,13 +49,6 @@ class DataTypes(IntEnum):
     STIMI = 2001
     COMPONENTL = 2002
     
-    @classmethod
-    def _doc(cls):
-        out = str(cls.__doc__)
-        for dtype in cls:
-            out += f"\n{dtype.name}:{dtype.value}"
-        return out
-
 
 def open_file(
     path: Union[Path, str],
