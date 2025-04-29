@@ -12,7 +12,7 @@ resolution-markers = [
 
 [[package]]
 name = "arf"
-version = "2.6.7"
+version = "2.7.0"
 source = { editable = "." }
 dependencies = [
     { name = "h5py", version = "3.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
@@ -21,6 +21,7 @@ dependencies = [
     { name = "numpy", version = "1.21.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "numpy", version = "1.24.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8' and python_full_version < '3.10'" },
     { name = "numpy", version = "2.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "packaging" },
 ]
 
 [package.dev-dependencies]
@@ -42,6 +43,7 @@ requires-dist = [
     { name = "numpy", marker = "python_full_version == '3.11.*'", specifier = ">=1.24.0" },
     { name = "numpy", marker = "python_full_version == '3.12.*'", specifier = ">=1.26.0" },
     { name = "numpy", marker = "python_full_version >= '3.13'", specifier = ">=2.2.1" },
+    { name = "packaging", specifier = ">=24.0" },
 ]
 
 [package.metadata.requires-dev]

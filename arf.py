@@ -15,6 +15,12 @@ import h5py as h5
 import numpy as np
 import numpy.typing as npt
 
+try:
+    # these symbols were moved in 3.12
+    from h5py import INDEX_CRT_ORDER, ITER_INC
+except ImportError:
+    from h5py.h5 import INDEX_CRT_ORDER, ITER_INC
+
 Timestamp = Union[datetime, struct_time, int, float, Tuple[int, int]]
 ArfTimeStamp = np.ndarray
 Datashape = Tuple[int, ...]
@@ -337,12 +343,10 @@ def keys_by_creation(group: h5.Group) -> Iterator[str]:
     Raises an error if the group was not set to track creation order.
 
     """
-    from h5py import h5
-
     out: list[bytes] = []
     try:
         group.id.links.iterate(
-            out.append, idx_type=h5.INDEX_CRT_ORDER, order=h5.ITER_INC
+            out.append, idx_type=INDEX_CRT_ORDER, order=ITER_INC
         )
     except (AttributeError, RuntimeError):
         # pre 2.2 shim
@@ -350,7 +354,7 @@ def keys_by_creation(group: h5.Group) -> Iterator[str]:
             if name.find(b"/", 1) == -1:
                 out.append(name)
 
-        group.id.links.visit(f, idx_type=h5.INDEX_CRT_ORDER, order=h5.ITER_INC)
+        group.id.links.visit(f, idx_type=INDEX_CRT_ORDER, order=ITER_INC)
     return map(group._d, out)
 
 
