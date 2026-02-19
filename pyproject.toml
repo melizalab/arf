@@ -7,7 +7,7 @@ name = "arf"
 dynamic = ["version"]
 description = "Advanced Recording Format for acoustic, behavioral, and physiological data"
 readme = "README.rst"
-requires-python = ">=3.7"
+requires-python = ">=3.11"
 authors = [
     {name = "Dan Meliza", email = "dan@meliza.org"},
 ]
@@ -21,12 +21,10 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: BSD License",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: C++",
     "Topic :: Scientific/Engineering",
     "Operating System :: Unix",
@@ -46,6 +44,7 @@ dependencies = [
     "numpy>=1.24.0; python_version == '3.11'",
     "numpy>=1.26.0; python_version == '3.12'",
     "numpy>=2.2.1; python_version >= '3.13'",
+    "numpy>=2.2.1; python_version >= '3.14'",
     "packaging>=24.0",
 ]
 
@@ -88,7 +87,7 @@ select = [
 ignore = ["E221", "E501", "E701"]
 
 [tool.mypy]
-python_version = "3.7"
+python_version = "3.11"
 ignore_missing_imports = true
 strict_optional = true
 check_untyped_defs = true

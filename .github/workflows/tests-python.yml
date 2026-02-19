@@ -1,20 +1,18 @@
 name: Python tests
-
-on: [push, pull_request]
+on:
+  pull_request:
+  push:
+    branches:
+      - master
 
 jobs:
   build:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-13, macos-14, ubuntu-22.04, windows-latest]
+        os: [macos-15, macos-15-intel, ubuntu-24.04, windows-latest]
         # can't do pypy - no support for h5py
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
-        exclude:
-          - os: macos-14
-            python-version: "3.7"
-          - os: windows-latest
-            python-version: "3.7"
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     runs-on: ${{ matrix.os }}
 
     steps:
