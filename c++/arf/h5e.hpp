@@ -76,6 +76,13 @@ T check_error(T retval)
 	return retval;
 }
 
+template<>
+bool check_error(bool retval)
+{
+	if (!retval)
+		return detail::auto_throw(H5E_DEFAULT,0);
+	return retval;
+}
 
 }}
 
