@@ -135,8 +135,10 @@ check-sanitizers:
 
 legacy: $(LEGACY_BIN)
 
+# the dep file is named .legacy.d, not test_arf.d, so it can't collide with the
+# one generated for tests/cxx/test_arf.cpp
 $(LEGACY_BIN): tests/test_arf.cpp | $(OBJDIR)
-	$(CXX) $(ALL_CXXFLAGS) -MF $(OBJDIR)/test_arf.d $(ALL_LDFLAGS) -o $@ $< $(HDF5_LIBS)
+	$(CXX) $(ALL_CXXFLAGS) -MF $(OBJDIR)/.legacy.d $(ALL_LDFLAGS) -o $@ $< $(HDF5_LIBS)
 
 # --- checks and housekeeping ----------------------------------------------
 
