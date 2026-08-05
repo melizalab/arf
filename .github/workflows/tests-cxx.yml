@@ -1,17 +1,69 @@
 name: C++ tests
 
-on: [push, pull_request]
+on:
+  pull_request:
+  push:
+    branches:
+      - master
 
 jobs:
-  cxx:
-    runs-on: ubuntu-latest
+  test:
+    name: ${{ matrix.os }} / ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: test
+          - os: ubuntu-24.04
+            target: test-release
+          # sanitizers need glibc: no libasan/libubsan on musl, and
+          # LeakSanitizer is unsupported on macOS arm64
+          - os: ubuntu-24.04
+            target: test-sanitize
+          - os: macos-15
+            target: test
+          - os: macos-15
+            target: test-release
+    runs-on: ${{ matrix.os }}
+    env:
+      ASAN_OPTIONS: detect_leaks=1
+      UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+
     steps:
-    - uses: actions/checkout@v7
-    - name: Install libraries
-      run: |
-        sudo apt-get update
-        sudo apt-get install libhdf5-serial-dev libboost-dev
-    - name: make test
-      run: make test
-    - name: test
-      run: tests/test_arf
+      - uses: actions/checkout@v7
+
+      # libhdf5-dev installs hdf5-serial.pc, with headers under
+      # /usr/include/hdf5/serial; the Makefile probes for that name.
+      - name: Install libraries (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libhdf5-dev libboost-dev pkg-config
+
+      - name: Install libraries (macOS)
+        if: runner.os == 'macOS'
+        run: brew install hdf5 boost pkgconf
+
+      - name: make ${{ matrix.target }}
+        run: make ${{ matrix.target }}
+
+      # the pre-doctest test program, until phase 3 ports it. Skipped under the
+      # sanitizers because it never calls H5close(), so hdf5's internal free
+      # lists would be reported as leaks.
+      - name: Legacy test program
+        if: matrix.target != 'test-sanitize'
+        run: make legacy && ./tests/test_arf
+
+  lint:
+    name: strict warnings (informational)
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libhdf5-dev libboost-dev pkg-config
+      - name: make lint-strict
+        run: make lint-strict

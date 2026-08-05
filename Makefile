@@ -18,8 +18,16 @@ CXXSTD     ?= -std=c++11
 WARN       ?= -Wall -Wextra
 PKG_CONFIG ?= pkg-config
 
-HDF5_CFLAGS ?= $(shell $(PKG_CONFIG) --cflags hdf5)
-HDF5_LIBS   ?= $(shell $(PKG_CONFIG) --libs hdf5) -lhdf5_hl
+# Debian and Ubuntu ship the serial build as hdf5-serial.pc, with headers under
+# /usr/include/hdf5/serial; everyone else provides hdf5.pc. Probe for both.
+# Override HDF5_CFLAGS/HDF5_LIBS directly if your hdf5 has no pkg-config file.
+HDF5_PC ?= $(shell for m in hdf5 hdf5-serial; do \
+	$(PKG_CONFIG) --exists $$m 2>/dev/null && { echo $$m; break; }; done)
+HDF5_CFLAGS ?= $(shell $(PKG_CONFIG) --cflags $(HDF5_PC) 2>/dev/null)
+# the -L from the .pc file is what makes -lhdf5_hl resolvable on Debian, where
+# libhdf5_hl.so lives in the versioned serial directory rather than on the
+# default search path
+HDF5_LIBS   ?= $(shell $(PKG_CONFIG) --libs $(HDF5_PC) 2>/dev/null) -lhdf5_hl
 
 # boost ships no pkg-config file; pick up the usual MacPorts/Homebrew prefixes
 # when they are actually present.
@@ -30,6 +38,11 @@ endif
 ifneq ($(wildcard /opt/homebrew/include/boost),)
 BOOST_CFLAGS  ?= -I/opt/homebrew/include
 BOOST_LDFLAGS ?= -L/opt/homebrew/lib
+endif
+
+ifeq ($(strip $(HDF5_PC)$(HDF5_CFLAGS)),)
+  $(warning no hdf5 pkg-config module found: tried hdf5 and hdf5-serial.)
+  $(warning Install the hdf5 development package, or set HDF5_CFLAGS and HDF5_LIBS.)
 endif
 
 INCLUDES = -Ic++ -Itests/vendor $(HDF5_CFLAGS) $(BOOST_CFLAGS)
@@ -61,6 +74,11 @@ LEGACY_BIN := tests/test_arf
 
 SAN_PROBE := build/.san_probe
 
+# Relink when a test source is added or removed.
+SRC_STAMP := $(OBJDIR)/.sources
+$(shell mkdir -p $(OBJDIR) && printf '%s\n' $(TEST_SRCS) | \
+	cmp -s - $(SRC_STAMP) 2>/dev/null || printf '%s\n' $(TEST_SRCS) > $(SRC_STAMP))
+
 .PHONY: all test test-release test-sanitize test-all build-tests legacy \
         check-sanitizers lint-strict clean install
 
@@ -70,8 +88,8 @@ all: test
 
 build-tests: $(TEST_BIN)
 
-$(TEST_BIN): $(TEST_OBJS)
-	$(CXX) $(ALL_LDFLAGS) -o $@ $^ $(HDF5_LIBS)
+$(TEST_BIN): $(TEST_OBJS) $(SRC_STAMP)
+	$(CXX) $(ALL_LDFLAGS) -o $@ $(TEST_OBJS) $(HDF5_LIBS)
 
 $(OBJDIR)/%.o: tests/cxx/%.cpp | $(OBJDIR)
 	$(CXX) $(ALL_CXXFLAGS) -c -o $@ $<
@@ -122,10 +140,11 @@ $(LEGACY_BIN): tests/test_arf.cpp | $(OBJDIR)
 
 # --- checks and housekeeping ----------------------------------------------
 
-# Informational only: the VLAs and unused parameters in the headers still fail
-# this.
+# Expected to fail until the phase 5 backlog is cleared: the headers still have
+# VLAs and unused parameters. Nothing depends on this target, and its CI job is
+# continue-on-error, so a non-zero exit here is a report rather than a blocker.
 lint-strict:
-	-$(CXX) $(CXXSTD) -Wall -Wextra -Wpedantic -Werror -fsyntax-only \
+	$(CXX) $(CXXSTD) -Wall -Wextra -Wpedantic -Werror -fsyntax-only \
 		$(INCLUDES) $(TEST_SRCS) tests/test_arf.cpp
 
 clean:
