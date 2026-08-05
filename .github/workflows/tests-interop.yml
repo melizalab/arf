@@ -1,0 +1,45 @@
+name: Interop tests
+
+# Checks that the two implementations agree about the files they write: arf.py
+# reads a C++-written file, the C++ library reads an arf.py-written one, and
+# the structure of a C++-written file is compared against a golden dump.
+#
+# This is the one place both toolchains are needed at once, which is why it is
+# its own workflow rather than an extra step bolted onto the C++ or Python one.
+# Linux only on purpose: agreement between implementations does not vary by
+# platform, and per-platform C++ behavior is already covered by tests-cxx.yml.
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  interop:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libhdf5-dev libboost-dev pkg-config
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      # builds the C++ helper binaries, then runs the pytest module that drives
+      # them; the module skips itself when they are missing
+      - name: make test-interop
+        run: make test-interop

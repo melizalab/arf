@@ -69,8 +69,11 @@ OBJDIR     := build/$(VARIANT)
 TEST_SRCS  := $(sort $(wildcard tests/cxx/*.cpp))
 TEST_OBJS  := $(patsubst tests/cxx/%.cpp,$(OBJDIR)/%.o,$(TEST_SRCS))
 TEST_BIN   := $(OBJDIR)/arf_test
-# the pre-doctest test program, kept building until phase 3 ports it
-LEGACY_BIN := tests/test_arf
+
+# standalone programs for the cross-implementation tests; they have their own
+# main(), so they live outside tests/cxx and never join the doctest binary
+INTEROP_SRCS := $(sort $(wildcard tests/interop/*.cpp))
+INTEROP_BINS := $(patsubst tests/interop/%.cpp,$(OBJDIR)/%,$(INTEROP_SRCS))
 
 SAN_PROBE := build/.san_probe
 
@@ -79,8 +82,8 @@ SRC_STAMP := $(OBJDIR)/.sources
 $(shell mkdir -p $(OBJDIR) && printf '%s\n' $(TEST_SRCS) | \
 	cmp -s - $(SRC_STAMP) 2>/dev/null || printf '%s\n' $(TEST_SRCS) > $(SRC_STAMP))
 
-.PHONY: all test test-release test-sanitize test-all build-tests legacy \
-        check-sanitizers lint-strict clean install
+.PHONY: all test test-release test-sanitize test-all build-tests interop \
+        test-interop golden-update check-sanitizers lint-strict clean install
 
 all: test
 
@@ -97,7 +100,7 @@ $(OBJDIR)/%.o: tests/cxx/%.cpp | $(OBJDIR)
 $(OBJDIR):
 	mkdir -p $@
 
-test: $(TEST_BIN) $(LEGACY_BIN)
+test: $(TEST_BIN)
 	$(TEST_BIN)
 
 test-release:
@@ -117,6 +120,20 @@ test-all: test
 		echo "note: skipping asan variant, $(CXX) has no sanitizer runtime"; \
 	fi
 
+# --- cross-implementation tests -------------------------------------------
+
+interop: $(INTEROP_BINS)
+
+$(OBJDIR)/%: tests/interop/%.cpp | $(OBJDIR)
+	$(CXX) $(ALL_CXXFLAGS) -MF $(OBJDIR)/$*.d $(ALL_LDFLAGS) -o $@ $< $(HDF5_LIBS)
+
+# needs the python environment as well as the C++ one
+test-interop: interop
+	uv run pytest tests/test_interop.py
+
+golden-update: interop
+	ARF_UPDATE_GOLDEN=1 uv run pytest tests/test_interop.py -k golden
+
 # Fail with something more useful than "cannot find -lasan".
 check-sanitizers:
 	@mkdir -p build
@@ -131,15 +148,6 @@ check-sanitizers:
 		exit 1; \
 	fi
 
-# --- legacy test program --------------------------------------------------
-
-legacy: $(LEGACY_BIN)
-
-# the dep file is named .legacy.d, not test_arf.d, so it can't collide with the
-# one generated for tests/cxx/test_arf.cpp
-$(LEGACY_BIN): tests/test_arf.cpp | $(OBJDIR)
-	$(CXX) $(ALL_CXXFLAGS) -MF $(OBJDIR)/.legacy.d $(ALL_LDFLAGS) -o $@ $< $(HDF5_LIBS)
-
 # --- checks and housekeeping ----------------------------------------------
 
 # Expected to fail until the phase 5 backlog is cleared: the headers still have
@@ -147,11 +155,11 @@ $(LEGACY_BIN): tests/test_arf.cpp | $(OBJDIR)
 # continue-on-error, so a non-zero exit here is a report rather than a blocker.
 lint-strict:
 	$(CXX) $(CXXSTD) -Wall -Wextra -Wpedantic -Werror -fsyntax-only \
-		$(INCLUDES) $(TEST_SRCS) tests/test_arf.cpp
+		$(INCLUDES) $(TEST_SRCS)
 
 clean:
 	rm -rf build
-	rm -f $(LEGACY_BIN) tests/*.o test.arf tests/test.arf
+	rm -f tests/*.o test.arf tests/test.arf
 
 install:
 	install -d $(PREFIX)/include/arf

@@ -48,13 +48,6 @@ jobs:
       - name: make ${{ matrix.target }}
         run: make ${{ matrix.target }}
 
-      # the pre-doctest test program, until phase 3 ports it. Skipped under the
-      # sanitizers because it never calls H5close(), so hdf5's internal free
-      # lists would be reported as leaks.
-      - name: Legacy test program
-        if: matrix.target != 'test-sanitize'
-        run: make legacy && ./tests/test_arf
-
   lint:
     name: strict warnings (informational)
     runs-on: ubuntu-24.04
