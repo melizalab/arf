@@ -22,7 +22,7 @@ namespace arf { namespace h5s {
 namespace detail {
 
 /** Guess a good chunk size */
-static std::vector<hsize_t> guess_chunk(std::vector<hsize_t> const & shape, int typesize)
+inline std::vector<hsize_t> guess_chunk(std::vector<hsize_t> const & shape, int typesize)
 {
 	static const int CHUNK_BASE = 16*1024;    // Multiplier by which chunks are adjusted
 	static const int CHUNK_MIN = 8*1024;      // Soft lower limit (8k)

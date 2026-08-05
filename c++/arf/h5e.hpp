@@ -34,7 +34,7 @@ namespace detail {
 
 
 /** The error callback just stores the last error on the stack */
-static int walk_cb(unsigned int n, H5E_error2_t const * desc, void *data)
+inline int walk_cb(unsigned int n, H5E_error2_t const * desc, void *data)
 {
 	H5E_error2_t *e = static_cast<H5E_error2_t*>(data);
 	*e = *desc;
@@ -47,7 +47,7 @@ static int walk_cb(unsigned int n, H5E_error2_t const * desc, void *data)
  * used as the auto handler, but that's a C function and we can't
  * throw exceptions back up to the caller.
  */
-static herr_t auto_throw(hid_t estack, void*) {
+inline herr_t auto_throw(hid_t estack, void*) {
 	H5E_error_t err;
 	if (H5Eget_num(estack)<=0)
 		return 0;
@@ -76,7 +76,7 @@ T check_error(T retval)
 	return retval;
 }
 
-template<>
+template<> inline
 bool check_error(bool retval)
 {
 	if (!retval)
