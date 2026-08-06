@@ -8,7 +8,7 @@ from datetime import datetime
 from enum import IntEnum
 from pathlib import Path
 from time import mktime, struct_time
-from typing import Iterator, Optional, Tuple, Union
+from typing import Iterator, List, Optional, Tuple, Union
 from uuid import UUID
 
 import h5py as h5
@@ -161,7 +161,8 @@ def create_entry(
     derived data such as spike times and labels. See add_data() for information
     on how data are stored.
 
-    name -- the name of the new entry. any valid python string.
+    name -- the name of the new entry. Any string without a path separator;
+            "a/b" would create a group nested inside "a" rather than an entry.
 
     timestamp -- timestamp of entry (datetime object, or seconds since
                January 1, 1970). Can be an integer, a float, or a tuple
@@ -172,6 +173,11 @@ def create_entry(
     Returns: newly created entry object
 
     """
+    if "/" in name:
+        raise ValueError(
+            f"entry name {name!r} contains a path separator, which would create "
+            "a nested group rather than an entry"
+        )
     grp = group.create_group(name, track_order=True)
     set_uuid(grp, attributes.pop("uuid", None))
     set_attributes(grp, timestamp=convert_timestamp(timestamp), **attributes)
@@ -260,7 +266,14 @@ def create_dataset(
 def create_table(
     group: h5.File, name: str, dtype: npt.DTypeLike, **attributes
 ) -> h5.Dataset:
-    """Create a new array dataset under group with compound datatype and maxshape=(None,)"""
+    """Create a new array dataset under group with compound datatype and maxshape=(None,)
+
+    Intended for top-level tables, such as a log for the whole file, which the
+    specification exempts from the dataset requirements. Nothing stops it being
+    used inside an entry, but a dataset there must carry `units` and
+    `datatype`; pass them as keyword arguments if you do that.
+
+    """
     dset = group.create_dataset(name, shape=(0,), dtype=dtype, maxshape=(None,))
     set_attributes(dset, **attributes)
     return dset
@@ -373,6 +386,45 @@ def check_file_version(file: h5.File):
             "here; upgrade arf to a release that implements it."
         )
     return file_version
+
+
+def _link_count(obj: h5.HLObject) -> int:
+    """The number of hard links pointing at an object."""
+    return h5.h5o.get_info(obj.id).rc
+
+
+def check_file_structure(file: h5.File) -> List[str]:
+    """Check the structural rules in the specification.
+
+    These are the rules that cannot be enforced as data is written, because a
+    caller can link objects together with plain h5py afterwards:
+
+    - a dataset must not be linked into more than one entry, which would leave
+      the time of its data undefined
+    - an entry must not be multiply linked to the root
+
+    Returns a list of problems, empty if the file conforms. Like
+    check_file_version this is advisory and nothing calls it for you.
+
+    Entries nested inside other entries are not examined: the specification
+    says their contents are not part of the ARF data hierarchy. Attributes are
+    not checked either -- create_dataset validates those as data is written.
+
+    """
+    problems = []
+    for name in file:
+        entry = file[name]
+        if not is_entry(entry):
+            continue
+        if _link_count(entry) > 1:
+            problems.append(f"entry '{name}' is linked into the file more than once")
+        for child in entry:
+            node = entry[child]
+            if isinstance(node, h5.Dataset) and _link_count(node) > 1:
+                problems.append(
+                    f"dataset '{name}/{child}' is linked into more than one entry"
+                )
+    return problems
 
 
 def set_attributes(node: h5.HLObject, overwrite: bool = True, **attributes) -> None:

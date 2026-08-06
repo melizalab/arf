@@ -563,3 +563,55 @@ def test_unknown_attributes_are_ignored(tmp_file):
     assert arf.is_time_series(dset)
     assert str(arf.check_file_version(tmp_file)) == arf.spec_version
     assert list(arf.keys_by_creation(tmp_file)) == ["entry"]
+
+
+def test_entry_names_reject_path_separators(tmp_file):
+    """"a/b" made a group nested inside "a", which is not a top-level entry."""
+    with pytest.raises(ValueError, match="path separator"):
+        arf.create_entry(tmp_file, "a/b", tstamp)
+    assert list(tmp_file.keys()) == []
+
+    # an ordinary name still works
+    arf.create_entry(tmp_file, "a_b", tstamp)
+    assert list(tmp_file.keys()) == ["a_b"]
+
+
+def test_check_file_structure_passes_a_conforming_file(tmp_file):
+    for i in range(2):
+        entry = arf.create_entry(tmp_file, "entry_%03d" % i, tstamp)
+        arf.create_dataset(entry, "pcm", randn(32), units="mV", sampling_rate=1000)
+    arf.create_table(tmp_file, "log", dtype=[("message", "S32")])
+    assert arf.check_file_structure(tmp_file) == []
+
+
+def test_check_file_structure_finds_a_shared_dataset(tmp_file):
+    """A dataset in two entries has no defined time, which the spec forbids."""
+    first = arf.create_entry(tmp_file, "entry_000", tstamp)
+    second = arf.create_entry(tmp_file, "entry_001", tstamp)
+    dset = arf.create_dataset(first, "pcm", randn(32), units="mV", sampling_rate=1000)
+    second["pcm"] = dset  # a second hard link, which arf cannot prevent
+
+    problems = arf.check_file_structure(tmp_file)
+    assert len(problems) == 2
+    assert all("linked into more than one entry" in p for p in problems)
+    assert any("entry_000/pcm" in p for p in problems)
+    assert any("entry_001/pcm" in p for p in problems)
+
+
+def test_check_file_structure_finds_a_multiply_linked_entry(tmp_file):
+    entry = arf.create_entry(tmp_file, "entry_000", tstamp)
+    arf.create_dataset(entry, "pcm", randn(32), units="mV", sampling_rate=1000)
+    tmp_file["alias"] = entry
+
+    problems = arf.check_file_structure(tmp_file)
+    assert any("linked into the file more than once" in p for p in problems)
+
+
+def test_check_file_structure_ignores_nested_entries(tmp_file):
+    """The spec says the contents of a nested entry are outside the hierarchy."""
+    outer = arf.create_entry(tmp_file, "outer", tstamp)
+    inner = arf.create_entry(outer, "inner", tstamp)
+    shared = arf.create_dataset(inner, "pcm", randn(32), units="mV", sampling_rate=1000)
+    # aliasing inside a nested entry is not this function's business
+    inner["alias"] = shared
+    assert arf.check_file_structure(tmp_file) == []
