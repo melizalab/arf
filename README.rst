@@ -1,7 +1,7 @@
 arf
 ---
 
-|ProjectStatus|_ |Version|_ |BuildStatus|_ |License|_ |PythonVersions|_
+|ProjectStatus|_ |Version|_ |PythonStatus|_ |License|_ |PythonVersions|_ |CxxStatus|_
 
 .. |ProjectStatus| image:: https://www.repostatus.org/badges/latest/active.svg
 .. _ProjectStatus: https://www.repostatus.org/#active
@@ -9,8 +9,8 @@ arf
 .. |Version| image:: https://img.shields.io/pypi/v/arf.svg
 .. _Version: https://pypi.python.org/pypi/arf/
 
-.. |BuildStatus| image:: https://github.com/melizalab/arf/actions/workflows/tests-python.yml/badge.svg
-.. _BuildStatus: https://github.com/melizalab/arf/actions/workflows/tests-python.yml
+.. |PythonStatus| image:: https://github.com/melizalab/arf/actions/workflows/tests-python.yml/badge.svg
+.. _PythonStatus: https://github.com/melizalab/arf/actions/workflows/tests-python.yml
 
 .. |License| image:: https://img.shields.io/pypi/l/arf.svg
 .. _License: https://opensource.org/license/bsd-3-clause/
@@ -18,8 +18,8 @@ arf
 .. |PythonVersions| image:: https://img.shields.io/pypi/pyversions/arf.svg
 .. _PythonVersions: https://pypi.python.org/pypi/arf/
 
-.. |BuildStatus| image:: https://github.com/melizalab/arf/actions/workflows/tests-cxx.yml/badge.svg
-.. _BuildStatus: https://github.com/melizalab/arf/actions/workflows/tests-cxx.yml
+.. |CxxStatus| image:: https://github.com/melizalab/arf/actions/workflows/tests-cxx.yml/badge.svg
+.. _CxxStatus: https://github.com/melizalab/arf/actions/workflows/tests-cxx.yml
 
 
 The Advanced Recording Format `arf <https://meliza.org/spec:1/arf/>`__
