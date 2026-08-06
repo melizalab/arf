@@ -46,6 +46,7 @@ class DataTypes(IntEnum):
     EXTRAC_EEG = 4
     INTRAC_CC = 5
     INTRAC_VC = 6
+    EXTRAC_RAW = 23
 
     EVENT = 1000
     SPIKET = 1001
