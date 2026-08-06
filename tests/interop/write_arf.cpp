@@ -69,7 +69,7 @@ main(int argc, char ** argv)
                 // file preserves
                 for (int i = nentries - 1; i >= 0; --i) {
                         char name[32];
-                        std::sprintf(name, "entry_%03d", i);
+                        std::snprintf(name, sizeof(name), "entry_%03d", i);
                         arf::entry e(f, name, 1234567890 + i, 1000 * i);
                         e.write_attribute()
                                 ("animal", "bird_042")
@@ -113,7 +113,8 @@ main(int argc, char ** argv)
                         for (int j = 0; j < nintervals; ++j) {
                                 interval record;
                                 std::memset(&record, 0, sizeof(record));
-                                std::sprintf(record.name, "stim_%02d", j);
+                                std::snprintf(record.name, sizeof(record.name),
+                                              "stim_%02d", j);
                                 record.start = 100 * j;
                                 record.stop = 100 * j + 50;
                                 intervals.write(&record, 1);

@@ -2,6 +2,7 @@
  * @brief unit tests for arf/h5pt.hpp -- packet tables
  */
 
+#include <cstdio>
 #include <cstring>
 #include <vector>
 
@@ -112,7 +113,8 @@ TEST_CASE("compound records round trip") {
         for (int i = 0; i < 3; ++i) {
                 interval record;
                 std::memset(&record, 0, sizeof(record));
-                std::sprintf(record.name, "label_%03d", i);
+                std::snprintf(record.name, sizeof(record.name),
+                              "label_%03d", i);
                 record.start = 100 * i;
                 record.stop = 100 * i + 50;
                 pt.write(&record, 1);

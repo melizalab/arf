@@ -37,7 +37,7 @@ std::string
 entry_name(int i)
 {
         char buf[64];
-        std::sprintf(buf, "entry_%03d", i);
+        std::snprintf(buf, sizeof(buf), "entry_%03d", i);
         return buf;
 }
 
@@ -118,7 +118,8 @@ TEST_CASE("a file of many entries round trips") {
                         for (int p = 0; p < npackets; ++p) {
                                 interval record;
                                 std::memset(&record, 0, sizeof(record));
-                                std::sprintf(record.name, "label_%03d", p);
+                                std::snprintf(record.name, sizeof(record.name),
+                                              "label_%03d", p);
                                 record.start = 100 * p;
                                 record.stop = 100 * p + 123;
                                 intervals.write(&record, 1);
