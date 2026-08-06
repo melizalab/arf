@@ -87,13 +87,9 @@ TEST_CASE("check_error passes valid return values through") {
         CHECK(arf::h5e::check_error(0) == 0);
 }
 
-TEST_CASE("check_error swallows a negative return when the HDF5 stack is empty") {
-        // CHARACTERIZATION: known bug, see the phase 5 backlog in CLAUDE.md.
-        // The documented contract is "throw if and only if the return value is
-        // invalid", but auto_throw() returns 0 when nothing was pushed onto the
-        // error stack, so the failure is converted into a plausible-looking 0.
+TEST_CASE("check_error throws on a negative return with an empty stack") {
         H5Eclear2(H5E_DEFAULT);
-        CHECK(arf::h5e::check_error(-1) == 0);
+        CHECK_THROWS_AS(arf::h5e::check_error(-1), arf::Exception);
 }
 
 TEST_CASE("opening a missing file throws") {

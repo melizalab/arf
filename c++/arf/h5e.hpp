@@ -49,17 +49,16 @@ inline int walk_cb(unsigned int n, H5E_error2_t const * desc, void *data)
  */
 inline herr_t auto_throw(hid_t estack, void*) {
 	H5E_error_t err;
-	if (H5Eget_num(estack)<=0)
-		return 0;
-
-	if (H5Ewalk2(estack, H5E_WALK_DOWNWARD, walk_cb, &err) < 0)
-		throw Exception("Failed to walk error stack");
-
-	if (err.desc)
-		throw Exception(err.desc);
-	else
-		throw Exception("Failed to extract detailed error description");
-	return 0;
+	// An invalid return value is an error whether or not hdf5 saw fit to
+	// describe it. This used to return 0 when the stack was empty, which
+	// turned a failure into a plausible-looking success value -- callers
+	// assigned it straight into _self as an identifier.
+	if (H5Eget_num(estack) > 0) {
+		if (H5Ewalk2(estack, H5E_WALK_DOWNWARD, walk_cb, &err) >= 0 && err.desc)
+			throw Exception(err.desc);
+		throw Exception("hdf5 call failed; its error stack could not be read");
+	}
+	throw Exception("hdf5 call failed without reporting an error");
 }
 
 }

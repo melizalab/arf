@@ -171,16 +171,12 @@ TEST_CASE("packet tables release both of their handles") {
         CHECK(arftest::handle_guard::open_handles() == before);
 }
 
-TEST_CASE("creating over an existing table silently hands back the old one") {
-        // CHARACTERIZATION: known bug, and a direct consequence of backlog
-        // item B. Unlike create_dataset, create_packet_table never checks for
-        // an existing link when replace is false, so H5PTcreate_fl is called
-        // over one and fails -- returning -1 while leaving hdf5's error stack
-        // *empty*. check_error's auto_throw sees nothing to report and converts
-        // the failure into 0, so no exception is raised and _ptself is set to a
-        // nonsense identifier. The constructor then opens the pre-existing
-        // dataset, and the caller gets a half-built object whose writes go
-        // nowhere.
+TEST_CASE("creating over an existing table without replace throws") {
+        // create_packet_table used to skip the existence check that
+        // create_dataset has, so H5PTcreate_fl ran over the existing link and
+        // failed -- returning -1 while leaving hdf5's error stack *empty*,
+        // which the old check_error turned into 0. The caller got a half-built
+        // object aliasing the original dataset, whose writes went nowhere.
         arftest::handle_guard guard;
         arftest::scratch_file scratch("pt_noreplace");
         file f(scratch.path, "w");
@@ -190,9 +186,9 @@ TEST_CASE("creating over an existing table silently hands back the old one") {
         first->write(std::vector<float>(32, 1.0f));
         REQUIRE(first->dataspace()->size() == 32);
 
-        arf::packet_table_ptr second = entry.create_packet_table<float>("stream");
-        // no throw, and it is aliasing the original dataset
-        CHECK(second->dataspace()->size() == 32);
+        CHECK_THROWS_AS(entry.create_packet_table<float>("stream"), arf::Exception);
+        // and the original is intact
+        CHECK(first->dataspace()->size() == 32);
 }
 
 TEST_CASE("an existing table can be reopened") {

@@ -172,11 +172,14 @@ public:
 		H5Tclose(_self);
 	}
 
+	// NB: check the htri_t that H5Tequal returns, then compare. Passing the
+	// comparison's result in instead routes an ordinary "these differ"
+	// answer through the error path, where false means failure.
 	bool operator==(datatype const & other) const {
-		return h5e::check_error(H5Tequal(_self, other.hid()) > 0);
+		return h5e::check_error(H5Tequal(_self, other.hid())) > 0;
 	}
 	bool operator!=(datatype const & other) const {
-		return h5e::check_error(H5Tequal(_self, other.hid()) <= 0);
+		return h5e::check_error(H5Tequal(_self, other.hid())) <= 0;
 	}
 
 	hsize_t size() const { return H5Tget_size(_self); }

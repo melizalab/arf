@@ -120,8 +120,15 @@ public:
 			    int compression=0) {
 		h5t::wrapper<StorageType> t;
 		h5t::datatype type(t);
-		if (replace && H5Lexists(_self, name.c_str(), H5P_DEFAULT) > 0)
+		// same contract as create_dataset: without replace, an existing
+		// name is an error. H5PTcreate_fl fails on one anyway, but it
+		// fails without pushing anything onto hdf5's error stack, so
+		// the diagnosis has to happen here.
+		if (H5Lexists(_self, name.c_str(), H5P_DEFAULT) > 0) {
+			if (!replace)
+				throw Exception("Object already exists with that name");
 			unlink(name);
+		}
 
                 h5pt::packet_table::ptr_type pt =
                         boost::make_shared<h5pt::packet_table>(_self, name, type, chunk_size, compression);
