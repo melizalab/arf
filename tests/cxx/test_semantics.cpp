@@ -52,21 +52,41 @@ TEST_CASE("handle-like classes move but do not copy") {
         CHECK(std::is_move_constructible<arf::h5f::file>::value);
 }
 
+namespace {
+
+/**
+ * Assign one object to another through references.
+ *
+ * Written this way on purpose. clang's -Wself-assign-overloaded rejects the
+ * literal `x = x`, and with -Werror that is a build failure -- but the
+ * behavior still needs testing, and this is closer to how self-assignment
+ * actually reaches a class anyway: two names for one object, not a visibly
+ * silly statement.
+ */
+template <typename Type>
+void
+assign(Type & target, Type const & source)
+{
+        target = source;
+}
+
+}
+
 TEST_CASE("self-assignment is safe") {
         // this used to close _self and then copy from the handle it had just
-        // closed, so `a = a` threw "not a dataspace"
+        // closed, so assigning an object to itself threw "not a dataspace"
         arftest::handle_guard guard;
 
         arf::h5s::dataspace space(std::vector<hsize_t>(1, 8));
-        space = space;
+        assign(space, space);
         CHECK(space.size() == 8);
 
         arf::h5t::datatype type{arf::h5t::wrapper<double>()};
-        type = type;
+        assign(type, type);
         CHECK(type.size() == sizeof(double));
 
         arf::h5p::proplist plist(H5P_FILE_CREATE);
-        plist = plist;
+        assign(plist, plist);
         CHECK(plist.valid());
 }
 

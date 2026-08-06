@@ -16,6 +16,7 @@ changing what the writer produces.
 """
 
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -258,20 +259,25 @@ def test_cxx_datasets_carry_a_deflate_frame(cxx_file):
             assert dset.compression_opts == 0
 
 
-def test_datatype_codes_agree_on_intrac_vc():
-    """The C++ enum said 7 where the spec and arf.py say 6."""
-    types_hpp = (REPO_ROOT / "c++" / "arf" / "types.hpp").read_text()
-    assert "INTRAC_VC = 6" in types_hpp
-    assert arf.DataTypes.INTRAC_VC == 6
-    assert arf.DataTypes.INTRAC_CC == 5
+def test_datatype_codes_agree_across_all_three():
+    """specification.md is normative; both libraries must match its table.
 
-
-def test_extrac_raw_still_missing_from_python():
-    """CHARACTERIZATION: arf.py has no EXTRAC_RAW.
-
-    The spec and the C++ enum both define it as 23. Adding it is an arf.py
-    change, which the remediation decisions put out of scope for now.
+    These codes are written out in three places, and have drifted twice: the
+    C++ enum gave INTRAC_VC the value 7 where the spec says 6, and arf.py had
+    no EXTRAC_RAW at all. Parsing the table keeps every code honest rather than
+    spot-checking the two that happened to break.
     """
+    table = re.findall(
+        r"^\s+(\d+)\s+([A-Z_]+)\s", (REPO_ROOT / "specification.md").read_text(), re.M
+    )
+    assert len(table) >= 14, "the datatype table in specification.md did not parse"
+
     types_hpp = (REPO_ROOT / "c++" / "arf" / "types.hpp").read_text()
-    assert "EXTRAC_RAW = 23" in types_hpp
-    assert not hasattr(arf.DataTypes, "EXTRAC_RAW")
+    for code, name in table:
+        assert re.search(
+            r"\b%s\s*=\s*%s\b" % (name, code), types_hpp
+        ), "c++/arf/types.hpp disagrees with the spec about %s = %s" % (name, code)
+        assert hasattr(arf.DataTypes, name), "arf.py has no DataTypes.%s" % name
+        assert int(getattr(arf.DataTypes, name)) == int(
+            code
+        ), "arf.py disagrees with the spec about %s = %s" % (name, code)
