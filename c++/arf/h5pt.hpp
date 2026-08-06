@@ -9,8 +9,10 @@
  * (at your option) any later version.
  */
 
-#ifndef _H5PT_H
-#define _H5PT_H 1
+#ifndef ARF_H5PT_HPP
+#define ARF_H5PT_HPP
+
+#include <algorithm>
 
 #include <hdf5_hl.h>
 #include "hdf5.hpp"
@@ -33,34 +35,41 @@ class packet_table : public h5d::dataset {
 public:
 	/** Open an existing packet table */
 	packet_table(hid_t parent, std::string const & name)
-		: h5d::dataset(parent, name) {
-		_ptself = h5e::check_error(H5PTopen(parent, name.c_str()));
-	}
+		: h5d::dataset(parent, name),
+		  _ptself(h5e::check_error(H5PTopen(parent, name.c_str()))) {}
 
 	/** Create a new packet table */
 	packet_table(hid_t parent, std::string const & name,
                      h5t::datatype const & type,
-		     hsize_t chunk_size, int compression) {
-		_ptself = h5e::check_error(H5PTcreate_fl(parent, name.c_str(), type.hid(),
-							 chunk_size, compression));
+		     hsize_t chunk_size, int compression)
+		: _ptself(h5e::check_error(H5PTcreate_fl(parent, name.c_str(), type.hid(),
+							 chunk_size, compression))) {
+		// the table has to exist before it can be opened as a dataset,
+		// which is why this is not in the initializer list
 		open_dataset(parent, name);
 	}
 
 	~packet_table() { close_table(); }
 
+	packet_table(packet_table const &) = delete;
+	packet_table & operator=(packet_table const &) = delete;
+
 	// H5PTclose does more than drop a reference, so this identifier is not
 	// the base's to manage and the moves are written out
-	packet_table(packet_table && other)
-		: h5d::dataset(std::move(other)), _ptself(other._ptself) {
-		other._ptself = H5I_INVALID_HID;
+	packet_table(packet_table && other) noexcept
+		: h5d::dataset(std::move(other)), _ptself(H5I_INVALID_HID) {
+		// false positive, as in h5f::file: the base's move touches only
+		// its own _self, so other._ptself is untouched
+		// NOLINTNEXTLINE(bugprone-use-after-move)
+		std::swap(_ptself, other._ptself);
 	}
 
-	packet_table & operator=(packet_table && other) {
+	packet_table & operator=(packet_table && other) noexcept {
 		if (this != &other) {
 			close_table();
 			h5d::dataset::operator=(std::move(other));
-			_ptself = other._ptself;
-			other._ptself = H5I_INVALID_HID;
+			// NOLINTNEXTLINE(bugprone-use-after-move)
+			std::swap(_ptself, other._ptself);
 		}
 		return *this;
 	}
@@ -73,7 +82,13 @@ public:
                 h5e::check_error(H5PTappend(_ptself, nitems, data));
         }
 
-	/** Appends data to the packet table */
+	/**
+	 * Appends data to the packet table.
+	 *
+	 * NB: deliberately hides h5d::dataset::write, which would overwrite the
+	 * dataset rather than append to it. The two are not interchangeable, so
+	 * do not add a using-declaration to expose the base version.
+	 */
         template <typename Type>
 	void write(std::vector<Type> const & data) {
                 write(reinterpret_cast<void const *>(data.data()), data.size());
@@ -93,5 +108,4 @@ protected:
 
 }}
 
-#endif /* _H5PT_H */
-
+#endif /* ARF_H5PT_HPP */

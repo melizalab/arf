@@ -2,8 +2,8 @@
  * @brief checking a file's specification version
  */
 
-#ifndef _ARF_VERSION_HH
-#define _ARF_VERSION_HH 1
+#ifndef ARF_VERSION_HPP
+#define ARF_VERSION_HPP
 
 #include <string>
 #include <utility>
@@ -25,7 +25,8 @@ struct spec_version {
         int major;
         int minor;
 
-        spec_version(int major_ = 0, int minor_ = 0) : major(major_), minor(minor_) {}
+        explicit spec_version(int major_ = 0, int minor_ = 0)
+                : major(major_), minor(minor_) {}
 
         /**
          * Parse a leading "major.minor" from text, ignoring anything after.
@@ -91,7 +92,7 @@ supported_spec_versions()
  *         supported range
  */
 inline spec_version
-check_file_version(h5a::node & file)
+check_file_version(h5a::node const & file)
 {
         if (!file.has_attribute("arf_version"))
                 throw Exception("file declares no arf_version; "
@@ -115,4 +116,4 @@ check_file_version(h5a::node & file)
 
 }
 
-#endif /* _ARF_VERSION_HH */
+#endif /* ARF_VERSION_HPP */

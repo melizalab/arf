@@ -3,6 +3,7 @@
 This is ARF, a python library for storing and accessing audio and ephys data in
 HDF5 containers.
 """
+import contextlib
 import numbers
 from datetime import datetime
 from enum import IntEnum
@@ -17,9 +18,9 @@ import numpy.typing as npt
 
 try:
     # these symbols were moved in 3.12
-    from h5py import INDEX_CRT_ORDER, ITER_INC
+    from h5py import INDEX_CRT_ORDER, ITER_INC  # ty: ignore[unresolved-import]
 except ImportError:
-    from h5py.h5 import INDEX_CRT_ORDER, ITER_INC
+    from h5py.h5 import INDEX_CRT_ORDER, ITER_INC  # ty: ignore[unresolved-import]
 
 Timestamp = Union[datetime, struct_time, int, float, Tuple[int, int]]
 ArfTimeStamp = np.ndarray
@@ -129,7 +130,7 @@ def open_file(
             )
         if Version(h5py_version) >= Version("3.8"):
             posargs += ["meta_block_size"]
-        kwargs.update({arg: kwargs.get(arg, None) for arg in posargs})
+        kwargs.update({arg: kwargs.get(arg) for arg in posargs})
         fapl = _files.make_fapl(driver, libver, **kwargs)
         fid = _files.make_fid(
             bytes(path),
@@ -227,21 +228,20 @@ def create_dataset(
     """
     from numpy import asarray
 
-    srate = attributes.get("sampling_rate", None)
+    srate = attributes.get("sampling_rate")
     # check data validity before doing anything
-    if not hasattr(data, "dtype"):
-        data = asarray(data)
-    # NB: outside the branch above. This check used to run only on input that
-    # had to be converted, so a numpy string array skipped it and failed later
-    # inside h5py with an opaque "No conversion path for dtype" TypeError.
-    if data.dtype.kind in ("S", "O", "U"):
+    values = data if hasattr(data, "dtype") else asarray(data)
+    # NB: applies to every input, not only to what had to be converted. A
+    # numpy string array already has a dtype, and skipping it here only defers
+    # the failure to h5py, which reports "No conversion path for dtype".
+    if values.dtype.kind in ("S", "O", "U"):  # ty: ignore[unresolved-attribute]
         raise ValueError("data must be in array with numeric or compound type")
-    if data.dtype.kind == "V":
-        if "start" not in data.dtype.names:
+    if values.dtype.kind == "V":  # ty: ignore[unresolved-attribute]
+        if "start" not in values.dtype.names:  # ty: ignore[unresolved-attribute]
             raise ValueError("complex event data requires 'start' field")
         if not isinstance(units, (list, tuple)):
             raise ValueError("complex event data requires sequence of units")
-        if not len(units) == len(data.dtype.names):
+        if not len(units) == len(values.dtype.names):  # ty: ignore[unresolved-attribute]
             raise ValueError("number of units doesn't match number of fields")
     if units == "":
         if srate is None or not srate > 0:
@@ -257,7 +257,7 @@ def create_dataset(
     # have sampling_rate attribute
 
     dset = group.create_dataset(
-        name, data=data, maxshape=maxshape, chunks=chunks, compression=compression
+        name, data=values, maxshape=maxshape, chunks=chunks, compression=compression
     )
     set_attributes(dset, units=units, datatype=datatype, **attributes)
     return dset
@@ -282,7 +282,10 @@ def create_table(
 def append_data(dset: h5.Dataset, data: npt.ArrayLike):
     """Append data to dset along axis 0. Data must be a single element or
     a 1D array of the same type as the dataset (including compound datatypes)."""
-    N = data.shape[0] if hasattr(data, "shape") else 1
+    # NB: not asarray(data). A tuple is one compound record, but converting it
+    # would make it an array of len(fields) elements.
+    shape = getattr(data, "shape", None)
+    N = shape[0] if shape else 1
     if N == 0:
         return
     oldlen = dset.shape[0]
@@ -298,9 +301,9 @@ def select_interval(dset: h5.Dataset, begin: float, end: float):
 
     """
     # Rescale the window only when the dataset's own times are in samples.
-    # This used to key on the presence of sampling_rate, but the spec permits a
-    # real-valued point process to carry one, and for those a window of [0, 1)
-    # seconds was silently reinterpreted as [0, 1000) samples.
+    # Keying on the presence of sampling_rate instead would be wrong: the spec
+    # permits a real-valued point process to carry one, and rescaling those
+    # reinterprets a window of [0, 1) seconds as [0, 1000) samples.
     if _sample_timebase(dset):
         Fs = dset.attrs["sampling_rate"]
         begin = int(begin * Fs)
@@ -316,10 +319,9 @@ def select_interval(dset: h5.Dataset, begin: float, end: float):
     else:
         t = dset[:]
         idx = (t >= begin) & (t < end)
-        # NB: unconditional. The guard used to be `if idx.size > 0`, but idx is
-        # the boolean mask, so its size is the length of the dataset rather
-        # than the number of matches -- and an empty dataset returned the mask
-        # itself, a bool array where the caller expects the dataset's dtype.
+        # NB: unconditional. Guarding on idx.size would test the length of
+        # the mask, not the number of matches, and returning idx for an empty
+        # dataset hands back a bool array where the dataset's dtype belongs.
         data = dset[idx] - begin
     return data, begin
 
@@ -350,11 +352,9 @@ def check_file_version(file: h5.File):
                 f"Unable to determine ARF version for {file.filename};"
                 "created by another program?"
             ) from err
-    try:
+    with contextlib.suppress(LookupError, AttributeError):
         # if the attribute is stored as a string, it's ascii-encoded
         ver = ver.decode("ascii")
-    except (LookupError, AttributeError):
-        pass
     # should be backwards compatible after 1.1
     try:
         file_version = Version(ver)
@@ -390,7 +390,9 @@ def check_file_version(file: h5.File):
 
 def _link_count(obj: h5.HLObject) -> int:
     """The number of hard links pointing at an object."""
-    return h5.h5o.get_info(obj.id).rc
+    from h5py import h5o  # ty: ignore[unresolved-import]
+
+    return h5o.get_info(obj.id).rc
 
 
 def check_file_structure(file: h5.File) -> List[str]:
@@ -497,14 +499,14 @@ def convert_timestamp(obj: Timestamp) -> ArfTimeStamp:
         out[0] = obj
     elif isinstance(obj, numbers.Real):
         # floor, not truncation: the microseconds are the remainder *after*
-        # the second, and a pre-epoch value like -1.5 used to come out as
+        # the second, so truncating a pre-epoch value like -1.5 yields
         # (-1, -500000), which is not a time the spec can express
         seconds = floor(obj)
         out[0] = seconds
-        out[1] = round((obj - seconds) * 1e6)
+        out[1] = round((float(obj) - seconds) * 1e6)  # ty: ignore[unsupported-operator]
     else:
         try:
-            out[:2] = obj[:2]
+            out[:2] = obj[:2]  # ty: ignore[not-subscriptable]
         except (IndexError, ValueError) as err:
             raise TypeError(f"unable to convert {obj} to timestamp") from err
     return out
@@ -550,15 +552,13 @@ def get_uuid(obj: h5.HLObject) -> UUID:
     return UUID(uuid.decode("ascii"))
 
 
-def count_children(obj: h5.HLObject, type=None) -> int:
+def count_children(obj: h5.Group, type=None) -> int:
     """Return the number of children of obj, optionally restricting by class"""
     if type is None:
         return len(obj)
-    else:
-        # there doesn't appear to be any hdf5 function for getting this
-        # information without inspecting each child, which makes this somewhat
-        # slow
-        return sum(1 for x in obj if obj.get(x, getclass=True) is type)
+    # hdf5 offers no way to get this without inspecting each child, so this is
+    # linear in the number of children
+    return sum(1 for x in obj if obj.get(x, getclass=True) is type)
 
 
 def _decode_attribute(value):

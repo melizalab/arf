@@ -115,8 +115,8 @@ TEST_CASE("assignment releases the old handle and takes a fresh copy") {
 
 TEST_CASE("constructing from a hid_t adopts the handle") {
         // Matches h5s::dataspace(hid_t). Callers holding a borrowed handle
-        // must copy it themselves; every in-library call site passes a
-        // freshly returned one, which is why this used to leak.
+        // must copy it themselves. Every in-library call site passes a
+        // freshly returned handle, which nothing else owns.
         hid_t native = H5Tcopy(H5T_NATIVE_INT);
         {
                 datatype wrapped(native);

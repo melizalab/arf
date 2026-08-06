@@ -3,8 +3,8 @@
  *
  */
 
-#ifndef _HDF5_HH
-#define _HDF5_HH 1
+#ifndef ARF_HDF5_HPP
+#define ARF_HDF5_HPP
 
 #include <algorithm>
 #include <string>
@@ -19,7 +19,7 @@ namespace h5f { class file; }
 
 /** Base class for runtime HDF5 errors. */
 struct Exception : public std::runtime_error {
-	Exception(char const * what) : std::runtime_error(what) { }
+	explicit Exception(char const * what) : std::runtime_error(what) { }
 };
 
 /**
@@ -67,7 +67,7 @@ public:
 
 	/** The path of the object within its file. */
 	std::string name() const {
-		ssize_t sz = H5Iget_name(_self, 0, 0);
+		ssize_t sz = H5Iget_name(_self, nullptr, 0);
 		if (sz <= 0) return std::string();
 		std::vector<char> buf(sz + 1, '\0');
 		if (H5Iget_name(_self, buf.data(), buf.size()) < 0) return std::string();
@@ -83,11 +83,11 @@ protected:
 
 	~handle() { close(); }
 
-	handle(handle && other) : _self(other._self) {
+	handle(handle && other) noexcept : _self(other._self) {
 		other._self = H5I_INVALID_HID;
 	}
 
-	handle & operator=(handle && other) {
+	handle & operator=(handle && other) noexcept {
 		if (this != &other) {
 			close();
 			_self = other._self;
@@ -110,4 +110,4 @@ protected:
 
 }
 
-#endif /* _HDF5_HH */
+#endif /* ARF_HDF5_HPP */

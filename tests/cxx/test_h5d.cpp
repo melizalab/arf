@@ -228,9 +228,9 @@ TEST_CASE("creating a dataset over an existing name throws") {
 }
 
 TEST_CASE("an empty dataset can be created and grown") {
-        // guess_chunk used to hand back a chunk of 0 for a zero-length extent,
-        // which H5Pset_chunk rejects, so an empty channel could not be written
-        // at all -- while arf.py allows one, as its "empty-spikes" case shows.
+        // A zero-length extent has to yield a chunk of at least 1, because
+        // H5Pset_chunk rejects 0 -- and arf.py allows empty datasets, as its
+        // "empty-spikes" case shows, so refusing them would split the two.
         arftest::handle_guard guard;
         arftest::scratch_file scratch("d_empty");
         file f(scratch.path, "w");
@@ -246,10 +246,9 @@ TEST_CASE("an empty dataset can be created and grown") {
 }
 
 TEST_CASE("introspection releases the handles it opens") {
-        // dataset::datatype() hands the result of H5Dget_type to
-        // h5t::datatype(hid_t), which used to *copy* it, leaving the original
-        // unowned. dataspace() next door was always clean because
-        // h5s::dataspace(hid_t) adopts. Both wrappers adopt now.
+        // Both wrappers adopt the handle they are given. Copying it instead
+        // would leave the caller's identifier unowned, and every call to
+        // H5Dget_type produces a fresh one.
         arftest::handle_guard guard;
         arftest::scratch_file scratch("d_typeleak");
         file f(scratch.path, "w");

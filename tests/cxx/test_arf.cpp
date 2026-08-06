@@ -54,9 +54,9 @@ TEST_CASE("the declared spec version matches the specification") {
 }
 
 TEST_CASE("opening for append preserves another writer's provenance") {
-        // Mode "a" used to stamp this library's identity on unconditionally,
-        // so appending one entry to a file arf.py wrote relabelled it as a c++
-        // file at whatever version this library happened to be.
+        // Stamping the identity on unconditionally would mean that appending
+        // a single entry to a file arf.py wrote relabels it as a c++ file at
+        // this library's version, destroying its provenance.
         arftest::handle_guard guard;
         arftest::scratch_file scratch("arf_append");
         {

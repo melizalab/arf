@@ -73,9 +73,10 @@ TEST_CASE("string attributes round trip") {
 }
 
 TEST_CASE("string attributes are readable whatever their storage") {
-        // arf files contain all three forms, and the C++ library used to be
-        // able to read only the last one -- so units, which the spec requires
-        // on every dataset, was unreadable in any file arf.py wrote.
+        // arf files contain all three, and the spec requires readers to
+        // accept any of them. Handling only fixed-length with a terminator --
+        // the form this library writes -- makes units unreadable in every file
+        // arf.py produces, and units is required on every dataset.
         arftest::handle_guard guard;
         arftest::scratch_file scratch("a_storage");
         file f(scratch.path, "w");
@@ -226,8 +227,8 @@ TEST_CASE("an attribute reports its own name and shape") {
 
 TEST_CASE("writing an attribute with the wrong length throws") {
         // H5Awrite always writes the attribute's whole extent, so a shorter
-        // buffer would be read past its end. This used to be an assert, which
-        // said nothing in a release build and let the overrun happen.
+        // buffer is read past its end. An assert would not catch it in the
+        // build where the overrun actually happens.
         arftest::handle_guard guard;
         arftest::scratch_file scratch("a_width");
         file f(scratch.path, "w");
@@ -251,12 +252,10 @@ TEST_CASE("writing an attribute with the wrong length throws") {
 }
 
 TEST_CASE("reading a string attribute releases its datatype") {
-        // attribute::read(std::string&) opens a datatype with H5Aget_type and
-        // used to drop it on the floor, on the success path and the throw path
-        // alike. arf::entry's open-existing constructor reads the uuid, so a
-        // walk of a file leaked one handle per entry, and hdf5 will not fully
-        // close a file while identifiers remain open. The handle now belongs
-        // to an h5t::datatype, which releases it however the function exits.
+        // The datatype H5Aget_type opens has to be released on the throw path
+        // as well as the success path. arf::entry's open-existing constructor
+        // reads the uuid, so leaking one per read means one per entry walked,
+        // and hdf5 will not fully close a file while identifiers remain open.
         arftest::handle_guard guard;
         arftest::scratch_file scratch("a_leak");
         file f(scratch.path, "w");
@@ -273,7 +272,7 @@ TEST_CASE("reading a string attribute releases its datatype") {
         CHECK(arftest::handle_guard::open_handles() == before);
 
         // including the early return on a type mismatch, which is the path
-        // that used to be missed
+        // easiest to leave unreleased
         before = arftest::handle_guard::open_handles();
         CHECK_THROWS_AS(node.read_attribute<std::string>("count"), arf::Exception);
         CHECK(arftest::handle_guard::open_handles() == before);

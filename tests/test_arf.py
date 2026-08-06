@@ -284,8 +284,8 @@ def test_units_stored_as_bytes(tmp_entry):
 
     That is what the C++ library writes, so classification has to cope with it.
     A discrete-timebase point process carries units of "samples" and a
-    sampling_rate, which is exactly the combination that used to be misread as
-    sampled data.
+    sampling_rate, which is the combination easiest to misread as sampled
+    data.
     """
     dset = arf.create_dataset(
         tmp_entry,
@@ -312,10 +312,11 @@ def test_units_stored_as_bytes(tmp_entry):
 
 
 def test_string_data_is_rejected_with_a_useful_error(tmp_entry):
-    """The check used to run only on input that had to be converted.
+    """Validation has to reach input that arrives already converted.
 
-    A numpy string array has a dtype already, so it skipped validation and
-    failed later inside h5py with "No conversion path for dtype".
+    A numpy string array has a dtype, so a check guarded on hasattr(data,
+    "dtype") never sees it and the failure surfaces inside h5py instead, as
+    "No conversion path for dtype".
     """
     with pytest.raises(ValueError, match="numeric or compound"):
         arf.create_dataset(tmp_entry, "list", ["a", "b"], units="s")
@@ -348,9 +349,8 @@ def test_select_interval_on_an_empty_dataset(tmp_entry):
 def test_select_interval_respects_units_not_sampling_rate(tmp_entry):
     """A real-valued point process may legitimately carry a sampling_rate.
 
-    The window used to be rescaled whenever the attribute was present, so a
-    one-second window over times in seconds selected the first thousand
-    seconds instead.
+    Rescaling whenever the attribute is present turns a one-second window over
+    times in seconds into the first thousand seconds.
     """
     times = np.array([0.5, 5.0, 900.0])
     seconds = arf.create_dataset(
@@ -423,7 +423,7 @@ def test_timestamp_before_the_epoch():
 
 
 def test_check_file_version_reports_bad_versions(tmp_file):
-    """packaging's InvalidVersion used to escape to the caller."""
+    """An unparseable version is reported, not raised out of packaging."""
     tmp_file.attrs["arf_version"] = "not-a-version"
     with pytest.raises(UserWarning, match="Unparseable"):
         arf.check_file_version(tmp_file)

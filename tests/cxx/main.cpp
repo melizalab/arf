@@ -19,9 +19,9 @@
 int
 main(int argc, char ** argv)
 {
-        // many cases provoke hdf5 failures on purpose; without this each one
-        // dumps an error stack to stderr. Opening a file no longer does this
-        // as a side effect, so the runner asks for it explicitly.
+        // many cases provoke hdf5 failures on purpose, and each would dump
+        // an error stack to stderr. The library will not silence this on a
+        // caller's behalf, so the runner asks for it.
         arf::h5e::silence_auto_print();
 
         doctest::Context context;

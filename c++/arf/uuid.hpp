@@ -8,8 +8,8 @@
  * fits in one header with no dependency beyond the standard library.
  */
 
-#ifndef _ARF_UUID_HH
-#define _ARF_UUID_HH 1
+#ifndef ARF_UUID_HPP
+#define ARF_UUID_HPP
 
 #include <algorithm>
 #include <cstddef>
@@ -46,9 +46,7 @@ public:
 	};
 
 	/** The nil uuid. */
-	uuid() {
-		std::fill(_bytes, _bytes + static_size, static_cast<value_type>(0));
-	}
+	uuid() = default;
 
 	/**
 	 * A new random (version 4) identifier.
@@ -62,7 +60,7 @@ public:
 		uuid out;
 		std::random_device source;
 		for (std::size_t i = 0; i < static_size; i += 4) {
-			std::uint32_t bits = static_cast<std::uint32_t>(source());
+			std::uint32_t bits = source();
 			out._bytes[i]     = static_cast<value_type>(bits & 0xff);
 			out._bytes[i + 1] = static_cast<value_type>((bits >> 8) & 0xff);
 			out._bytes[i + 2] = static_cast<value_type>((bits >> 16) & 0xff);
@@ -137,9 +135,9 @@ private:
 		throw Exception("uuid contains a character that is not a hex digit");
 	}
 
-	value_type _bytes[static_size];
+	value_type _bytes[static_size] = {};
 };
 
 }
 
-#endif /* _ARF_UUID_HH */
+#endif /* ARF_UUID_HPP */

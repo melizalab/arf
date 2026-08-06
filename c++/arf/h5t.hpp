@@ -9,8 +9,8 @@
  * (at your option) any later version.
  */
 
-#ifndef _H5T_H
-#define _H5T_H 1
+#ifndef ARF_H5T_HPP
+#define ARF_H5T_HPP
 
 #include <algorithm>
 #include <limits>
@@ -180,15 +180,16 @@ public:
 
 	/**
 	 * Copy-and-swap: one operator serves copy and move assignment, and
-	 * self-assignment is safe. Assigning used to close _self and then copy
-	 * from other, so `a = a` copied from the handle it had just closed.
+	 * self-assignment is safe. Assigning by closing _self first and then
+	 * copying from other looks equivalent and is not: when they are the
+	 * same object it copies from the handle it just closed.
 	 */
 	datatype & operator= (datatype other) {
 		swap(other);
 		return *this;
 	}
 
-	void swap(datatype & other) { std::swap(_self, other._self); }
+	void swap(datatype & other) noexcept { std::swap(_self, other._self); }
 
 	hsize_t size() const { return H5Tget_size(_self); }
 
@@ -208,5 +209,4 @@ public:
 } // namespace arf
 
 
-#endif /* _H5T_H */
-
+#endif /* ARF_H5T_HPP */

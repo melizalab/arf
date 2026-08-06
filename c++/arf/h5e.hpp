@@ -9,8 +9,8 @@
  * (at your option) any later version.
  */
 
-#ifndef _H5E_H
-#define _H5E_H 1
+#ifndef ARF_H5E_HPP
+#define ARF_H5E_HPP
 
 #include "hdf5.hpp"
 
@@ -47,12 +47,12 @@ inline int walk_cb(unsigned int, H5E_error2_t const * desc, void *data)
  * used as the auto handler, but that's a C function and we can't
  * throw exceptions back up to the caller.
  */
-inline herr_t auto_throw(hid_t estack, void*) {
+inline herr_t auto_throw(hid_t estack, void *) {
 	H5E_error_t err;
 	// An invalid return value is an error whether or not hdf5 saw fit to
-	// describe it. This used to return 0 when the stack was empty, which
-	// turned a failure into a plausible-looking success value -- callers
-	// assigned it straight into _self as an identifier.
+	// describe it. Returning 0 for an undescribed failure would be worse
+	// than useless: callers assign the result straight into _self as an
+	// identifier, so a swallowed error becomes a plausible-looking handle.
 	if (H5Eget_num(estack) > 0) {
 		if (H5Ewalk2(estack, H5E_WALK_DOWNWARD, walk_cb, &err) >= 0 && err.desc)
 			throw Exception(err.desc);
@@ -68,13 +68,14 @@ inline herr_t auto_throw(hid_t estack, void*) {
  *
  * Failures are reported as exceptions regardless, so the printout is usually
  * redundant noise. This is *not* called for you: it changes a global setting
- * in a library the rest of the program may also be using, and opening a file
- * used to do it as a side effect. Call it once at startup if you want it.
+ * in a library the rest of the program may also be using, which is not a
+ * decision a constructor should make on the caller's behalf. Call it once at
+ * startup if you want it.
  */
 inline void
 silence_auto_print()
 {
-	H5Eset_auto2(H5E_DEFAULT, 0, 0);
+	H5Eset_auto2(H5E_DEFAULT, nullptr, nullptr);
 }
 
 /**
@@ -85,7 +86,7 @@ template <typename T> inline
 T check_error(T retval)
 {
 	if (retval < 0)
-		return detail::auto_throw(H5E_DEFAULT,0);
+		return detail::auto_throw(H5E_DEFAULT, nullptr);
 	return retval;
 }
 
@@ -93,11 +94,10 @@ template<> inline
 bool check_error(bool retval)
 {
 	if (!retval)
-		return detail::auto_throw(H5E_DEFAULT,0);
+		return detail::auto_throw(H5E_DEFAULT, nullptr);
 	return retval;
 }
 
 }}
 
-#endif /* _H5E_H */
-
+#endif /* ARF_H5E_HPP */

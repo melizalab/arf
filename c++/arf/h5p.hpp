@@ -9,8 +9,8 @@
  * (at your option) any later version.
  */
 
-#ifndef _H5P_H
-#define _H5P_H 1
+#ifndef ARF_H5P_HPP
+#define ARF_H5P_HPP
 
 #include <algorithm>
 #include <hdf5.h>
@@ -40,7 +40,7 @@ public:
                 return *this;
         }
 
-        void swap(proplist & other) { std::swap(_self, other._self); }
+        void swap(proplist & other) noexcept { std::swap(_self, other._self); }
 
         bool operator==(proplist const & other) const {
                 return h5e::check_error(H5Pequal(_self, other.hid())) > 0;
@@ -52,4 +52,4 @@ public:
 
 }}
 
-#endif /* _H5P_H */
+#endif /* ARF_H5P_HPP */

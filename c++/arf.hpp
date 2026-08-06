@@ -9,8 +9,8 @@
  * (at your option) any later version.
  */
 
-#ifndef _ARF_HH
-#define _ARF_HH 1
+#ifndef ARF_HPP
+#define ARF_HPP
 
 #include "arf/types.hpp"
 #include "arf/uuid.hpp"
@@ -225,4 +225,4 @@ public:
 }
 
 
-#endif /* _ARF_H */
+#endif /* ARF_HPP */

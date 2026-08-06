@@ -51,6 +51,7 @@ dev = [
     "pytest>=5.0",
     "pytest-cov >= 4.1.0",
     "ruff>=0.7.0",
+    "ty>=0.0.69",
 ]
 
 [tool.hatch.version]
@@ -80,6 +81,9 @@ select = [
     "B",  # flake8-bugbear
 ]
 ignore = ["E221", "E501", "E701"]
+
+[tool.ty.src]
+include = ["arf.py"]
 
 [tool.mypy]
 python_version = "3.11"

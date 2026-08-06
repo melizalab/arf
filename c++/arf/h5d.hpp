@@ -9,10 +9,8 @@
  * (at your option) any later version.
  */
 
-#ifndef _H5D_H
-#define _H5D_H 1
-
-#include <cassert>
+#ifndef ARF_H5D_HPP
+#define ARF_H5D_HPP
 
 #include "hdf5.hpp"
 #include "h5a.hpp"
@@ -39,7 +37,9 @@ public:
 		h5s::dataspace const & dspace,
 		h5t::datatype const & type,
 		int compress) {
-		std::vector<hsize_t> chunks = h5s::detail::guess_chunk(dspace.dims(), type.size());
+		std::vector<hsize_t> chunks =
+			h5s::detail::guess_chunk(dspace.dims(),
+						 static_cast<int>(type.size()));
 		create_dataset(parent, name, dspace, type, chunks, compress);
 	}
 
@@ -54,6 +54,8 @@ public:
 
 	dataset(dataset && other) = default;
 	dataset & operator=(dataset && other) = default;
+	dataset(dataset const &) = delete;
+	dataset & operator=(dataset const &) = delete;
 
 	/** Write data to the current dataset. The extent of the dataset is resized to match. */
 	template <typename Type>
@@ -94,7 +96,7 @@ public:
          *
          */
 	template <typename Type>
-	void read(Type * data, hsize_t size, hsize_t offset=0, hsize_t stride=1) {
+	void read(Type * data, hsize_t size, hsize_t offset=0, hsize_t stride=1) const {
 		h5t::wrapper<Type> t;
 		h5t::datatype type(t);
                 h5s::dataspace filespace(dataspace(),
@@ -107,17 +109,16 @@ public:
 	}
 
 	template <typename Type>
-	void read(std::vector<Type> & data, hsize_t count, hsize_t offset=0, hsize_t stride=1) {
-                // resize first: this used to write through the caller's
-                // existing buffer whatever its length, overflowing whenever it
-                // held fewer than count elements
+	void read(std::vector<Type> & data, hsize_t count, hsize_t offset=0, hsize_t stride=1) const {
+                // resize first: writing through whatever the caller happened
+                // to pass overflows as soon as it is shorter than count
                 data.resize(count);
                 if (count == 0) return;
                 read(data.data(), count, offset, stride);
         }
 
 	template <typename Type>
-	void read(std::vector<Type> & data) {
+	void read(std::vector<Type> & data) const {
                 data.resize(dataspace().size());
                 if (data.empty()) return;
                 read(data.data(), data.size());
@@ -130,7 +131,8 @@ public:
 	 * maxsize
 	 */
 	void set_extent(std::vector<hsize_t> const & size) {
-		assert(size.size() >= dataspace().ndims());
+		if (size.size() < dataspace().ndims())
+			throw Exception("set_extent needs a size for every dimension");
 		h5e::check_error(H5Dset_extent(_self, size.data()));
 	}
 
@@ -143,7 +145,7 @@ public:
 	}
 
 	std::vector<hsize_t> chunks() const {
-		int ndims = dataspace().ndims();
+		int ndims = static_cast<int>(dataspace().ndims());
 		hid_t plist = H5Dget_create_plist(_self);
 		std::vector<hsize_t> out(ndims);
 		h5e::check_error(H5Pget_chunk(plist, ndims, out.data()));
@@ -166,7 +168,8 @@ private:
 			throw Exception("Dataset already exists");
 		h5p::proplist dcpl(H5P_DATASET_CREATE);
 		h5e::check_error(H5Pset_layout(dcpl.hid(), H5D_CHUNKED));
-		h5e::check_error(H5Pset_chunk(dcpl.hid(), dspace.ndims(), chunkdims.data()));
+		h5e::check_error(H5Pset_chunk(dcpl.hid(), static_cast<int>(dspace.ndims()),
+					      chunkdims.data()));
 		// 0 is a real setting, not "off": zlib stores the data
 		// uncompressed but still frames it, giving a per-chunk adler32
 		// for about 16 bytes a chunk. H5Pset_deflate rejects a negative
@@ -183,5 +186,4 @@ private:
 
 }}
 
-#endif /* _H5D_H */
-
+#endif /* ARF_H5D_HPP */

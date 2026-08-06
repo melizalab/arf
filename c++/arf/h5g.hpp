@@ -9,8 +9,8 @@
  * (at your option) any later version.
  */
 
-#ifndef _H5G_H
-#define _H5G_H 1
+#ifndef ARF_H5G_HPP
+#define ARF_H5G_HPP
 
 #include <type_traits>
 #include "hdf5.hpp"
@@ -63,6 +63,8 @@ public:
 
 	group(group && other) = default;
 	group & operator=(group && other) = default;
+	group(group const &) = delete;
+	group & operator=(group const &) = delete;
 
 	/**
 	 * Create a new dataset and add data to it.  Currently only 1D
@@ -136,7 +138,7 @@ public:
 	 */
 	template <typename Type>
 	void read_dataset(std::string const & name, std::vector<Type> & data,
-                          hsize_t offset=0, hsize_t stride=1) {
+                          hsize_t offset=0, hsize_t stride=1) const {
 		// NB: the count has to be worked out here. Forwarding straight
 		// to dataset::read(vector, count, offset, stride) put offset in
 		// count and stride in offset, so the defaults asked for zero
@@ -151,7 +153,7 @@ public:
 
 	template <typename Type>
 	void read_dataset(std::string const & name, Type * data, hsize_t size,
-                          hsize_t offset=0, hsize_t stride=1) {
+                          hsize_t offset=0, hsize_t stride=1) const {
 		h5d::dataset(_self, name).read(data, size, offset, stride);
 	}
 
@@ -178,7 +180,7 @@ public:
 	iterate(F & functor,
                 H5_index_t index_type=H5_INDEX_CRT_ORDER,
                 H5_iter_order_t order=H5_ITER_INC,
-                hsize_t *idx=0) const {
+                hsize_t *idx=nullptr) const {
 		h5e::check_error(H5Literate(_self, index_type, order, idx,
 					    &F::iterate,
 					    static_cast<void*>(&functor)));
@@ -215,5 +217,4 @@ private:
 
 }}
 
-#endif /* _H5G_H */
-
+#endif /* ARF_H5G_HPP */

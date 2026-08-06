@@ -9,8 +9,8 @@
  * (at your option) any later version.
  */
 
-#ifndef _ARF_TYPES_HH
-#define _ARF_TYPES_HH 1
+#ifndef ARF_TYPES_HPP
+#define ARF_TYPES_HPP
 
 #include <cstdint>
 #include <hdf5.h>
@@ -31,8 +31,8 @@
 
 namespace arf {
 
-// NB: these used to be shared_ptr aliases. The wrappers are move-only values
-// now, returned by value, so there is nothing to point at -- write
+// NB: no *_ptr aliases. The wrappers are move-only values returned by value,
+// so there is nothing to point at -- write
 // `arf::h5d::dataset d = entry.create_dataset(...)` and let it move.
 class entry;
 class file;

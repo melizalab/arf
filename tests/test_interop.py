@@ -180,10 +180,10 @@ def test_cxx_discrete_event_data_classifies_correctly(cxx_file):
     """A spike train on a discrete timebase is event data, not a time series.
 
     It carries both units="samples" and a sampling_rate, as the spec requires,
-    which is the combination is_time_series used to misread. The C++ library
-    writes fixed-length strings, which h5py returns as bytes, and arf.py now
-    normalizes before comparing -- so a file from either library, or from any
-    other writer's choice of storage, classifies the same.
+    which is the combination easiest to misread as sampled data. The C++
+    library writes fixed-length strings, which h5py returns as bytes, so the
+    comparison has to normalize or files from the two libraries classify
+    differently.
     """
     with h5py.File(cxx_file, "r") as fp:
         discrete = fp["entry_000"]["spike_samples"]
@@ -235,7 +235,7 @@ def test_cxx_compound_units_are_one_per_field(cxx_file):
         # one per field, in field order
         assert len(units) == len(intervals.dtype.names)
 
-    # and arf.py still rejects the scalar form the C++ library used to write
+    # and arf.py rejects the scalar form outright
     with pytest.raises(ValueError, match="sequence of units"):
         with arf.open_file("/dev/null", "w", driver="core", backing_store=False) as fp:
             entry = arf.create_entry(fp, "e", 1)

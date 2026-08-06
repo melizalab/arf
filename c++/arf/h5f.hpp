@@ -9,8 +9,8 @@
  * (at your option) any later version.
  */
 
-#ifndef _H5F_H
-#define _H5F_H 1
+#ifndef ARF_H5F_HPP
+#define ARF_H5F_HPP
 
 #include "hdf5.hpp"
 #include "h5g.hpp"
@@ -53,7 +53,7 @@ public:
 		else if (mode == "a") {
                         // test for existence (HDF5is_hdf5 may not work)
                         FILE *fp = fopen(name,"r");
-                        if (fp == 0)
+                        if (fp == nullptr)
 				_file_id = h5e::check_error(H5Fcreate(name, H5F_ACC_TRUNC,
 								      fcpl.hid(), fapl.hid()));
                         else {
@@ -70,25 +70,33 @@ public:
 	}
 
 	/** Wrap file hid_t object. Takes ownership of handle */
-	file(hid_t file_id) {
-		_file_id = file_id;
+	explicit file(hid_t file_id) : _file_id(file_id) {
 		_self = h5e::check_error(H5Gopen2(_file_id, "/", H5P_DEFAULT));
 	}
 
 	~file() { close_file(); }
 
+	file(file const &) = delete;
+	file & operator=(file const &) = delete;
+
 	// a second identifier to carry, so the moves are written out rather
 	// than defaulted; the base takes care of _self, the root group
-	file(file && other) : h5g::group(std::move(other)), _file_id(other._file_id) {
-		other._file_id = H5I_INVALID_HID;
+	file(file && other) noexcept
+		: h5g::group(std::move(other)), _file_id(H5I_INVALID_HID) {
+		// clang-tidy reports a use-after-move here. It is a false
+		// positive: the base's move touches only its own _self, so
+		// other._file_id is untouched, and swapping leaves the source
+		// invalid either way.
+		// NOLINTNEXTLINE(bugprone-use-after-move)
+		std::swap(_file_id, other._file_id);
 	}
 
-	file & operator=(file && other) {
+	file & operator=(file && other) noexcept {
 		if (this != &other) {
 			close_file();
 			h5g::group::operator=(std::move(other));
-			_file_id = other._file_id;
-			other._file_id = H5I_INVALID_HID;
+			// NOLINTNEXTLINE(bugprone-use-after-move)
+			std::swap(_file_id, other._file_id);
 		}
 		return *this;
 	}
@@ -100,14 +108,22 @@ public:
 
 	/** size of the file, in bytes */
 	hsize_t size() const {
-		hsize_t v;
+		hsize_t v = 0;
 		h5e::check_error(H5Fget_filesize(_file_id, &v));
 		return v;
 	}
 
-        /** name of the file, or an empty string if handl is invalid */
-	std::string name() const {
-		ssize_t sz = H5Fget_name(_file_id, 0, 0);
+	/**
+	 * The path of the file on disk, or an empty string if the handle is
+	 * invalid.
+	 *
+	 * NB: not called name(). handle::name() returns the object's path
+	 * *within* the file, which for the root group is always "/", and having
+	 * both under one name meant the answer depended on the static type of
+	 * the reference you happened to hold.
+	 */
+	std::string filename() const {
+		ssize_t sz = H5Fget_name(_file_id, nullptr, 0);
 		if (sz <= 0) return std::string();
 		std::vector<char> buf(sz + 1, '\0');
 		H5Fget_name(_file_id, buf.data(), buf.size());
@@ -144,5 +160,4 @@ handle::file() const {
 
 
 
-#endif /* _H5F_H */
-
+#endif /* ARF_H5F_HPP */

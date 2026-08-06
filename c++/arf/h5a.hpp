@@ -9,8 +9,8 @@
  * (at your option) any later version.
  */
 
-#ifndef _H5A_H
-#define _H5A_H 1
+#ifndef ARF_H5A_HPP
+#define ARF_H5A_HPP
 
 #include <algorithm>
 #include <cstring>
@@ -49,6 +49,8 @@ public:
 
 	attribute(attribute && other) = default;
 	attribute & operator=(attribute && other) = default;
+	attribute(attribute const &) = delete;
+	attribute & operator=(attribute const &) = delete;
 
 	/** assign value to attribute. automatic type conversion */
 	template <typename Type>
@@ -64,8 +66,8 @@ public:
 		h5t::datatype type(t);
 		// H5Awrite always writes the attribute's whole extent, so a
 		// buffer of any other length is a mistake: a shorter one gets
-		// read past its end. This used to be an assert, which said
-		// nothing at all in a release build.
+		// read past its end. Throwing rather than asserting, because an
+		// assert says nothing in the build where it matters.
 		if (dataspace().size() != static_cast<hsize_t>(size))
 			throw Exception("attribute write size does not match its extent");
 		h5e::check_error(H5Awrite(_self, type.hid(), arr));
@@ -89,7 +91,8 @@ public:
 			// hdf5 wants the address of the pointer, not the
 			// characters
 			char const * p = value.c_str();
-			h5e::check_error(H5Awrite(_self, type.hid(), &p));
+			h5e::check_error(H5Awrite(_self, type.hid(),
+						  static_cast<void const *>(&p)));
 			return;
 		}
 		// A fixed-length write consumes exactly the datatype's width.
@@ -109,7 +112,7 @@ public:
 
 	/** read value from attribute. automatic type conversion */
         template <typename Type>
-        Type read() {
+        Type read() const {
                 Type t;
                 read(t);
                 return t;
@@ -117,14 +120,14 @@ public:
 
 
 	template <typename Type>
-	void read(Type & out) {
+	void read(Type & out) const {
 		h5t::wrapper<Type> t;
 		h5t::datatype type(t);
 		h5e::check_error(H5Aread(_self, type.hid(), &out));
 	}
 
 	template <typename Type>
-	void read(std::vector<Type> & out) {
+	void read(std::vector<Type> & out) const {
 		h5t::wrapper<Type> t;
 		h5t::datatype type(t);
                 out.resize(dataspace().size());
@@ -139,7 +142,7 @@ public:
 	 * fixed-length with no terminator, which is what arf.py writes for a
 	 * uuid; and fixed-length with one, which is what this library writes.
 	 */
-	void read(std::string & str) {
+	void read(std::string & str) const {
 		// the wrapper owns the handle, so it is released on the throw
 		// path as well as the success path
 		h5t::datatype type(h5e::check_error(H5Aget_type(_self)));
@@ -148,8 +151,8 @@ public:
 
 		if (H5Tis_variable_str(type.hid()) > 0) {
 			// hdf5 allocates the characters and hands us the pointer
-			char * buf = 0;
-			herr_t rc = H5Aread(_self, type.hid(), &buf);
+			char * buf = nullptr;
+			herr_t rc = H5Aread(_self, type.hid(), static_cast<void *>(&buf));
 			if (buf) {
 				str.assign(buf);
 				H5free_memory(buf);
@@ -179,7 +182,7 @@ public:
 
 	/** Return the name of the attribute */
 	std::string name() const {
-		ssize_t sz = H5Aget_name(_self, 0, 0);
+		ssize_t sz = H5Aget_name(_self, 0, nullptr);
 		if (sz <= 0) return std::string();
 		std::vector<char> buf(sz + 1, '\0');
 		H5Aget_name(_self, buf.size(), buf.data());
@@ -198,10 +201,12 @@ public:
 
 	node(node && other) = default;
 	node & operator=(node && other) = default;
+	node(node const &) = delete;
+	node & operator=(node const &) = delete;
 
 
         /** Determine whether an attribute with a given name exists on the object */
-        bool has_attribute(std::string const & name) {
+        bool has_attribute(std::string const & name) const {
                 return (h5e::check_error(H5Aexists(_self, name.c_str())));
         }
 
@@ -309,7 +314,7 @@ public:
         }
 
         struct attr_writer {
-                attr_writer (node & n) : _n(n) {}
+                explicit attr_writer (node & n) : _n(n) {}
                 node & _n;
 
                 template <typename Type>
@@ -330,14 +335,14 @@ public:
 
 	/** Read an attribute's value */
 	template <typename T>
-        T read_attribute(std::string const & name) {
+        T read_attribute(std::string const & name) const {
                 T ret;
                 read_attribute(name, ret);
                 return ret;
         }
 
 	template <typename T>
-	void read_attribute(std::string const & name, T & value) {
+	void read_attribute(std::string const & name, T & value) const {
 		attribute attr(_self, name);
 		attr.read(value);
 	}
@@ -355,5 +360,4 @@ protected:
 } // namespace h5a
 } // namespace arf
 
-#endif /* _H5A_H */
-
+#endif /* ARF_H5A_HPP */

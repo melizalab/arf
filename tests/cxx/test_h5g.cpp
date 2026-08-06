@@ -199,11 +199,10 @@ TEST_CASE("read_dataset fills a caller-supplied array") {
 }
 
 TEST_CASE("the vector overload of read_dataset resizes and fills") {
-        // This used to forward (offset, stride) into
-        // dataset::read(vector, count, offset), so offset landed in count and
-        // stride in offset: the defaults asked for zero elements starting at
-        // index one, and nothing was read. It also never resized, so an empty
-        // vector was indexed out of bounds.
+        // NB: the count is worked out here rather than forwarded. Passing
+        // (offset, stride) straight to dataset::read(vector, count, offset)
+        // puts offset in count and stride in offset, which asks for zero
+        // elements starting at index one -- and reads nothing, quietly.
         arftest::handle_guard guard;
         arftest::scratch_file scratch("g_read_vector");
         file f(scratch.path, "w");

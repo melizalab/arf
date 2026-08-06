@@ -54,11 +54,10 @@ TEST_CASE("the exception carries hdf5's own message") {
 }
 
 TEST_CASE("an invalid return throws even when the stack is empty") {
-        // The contract is "throw if and only if the return value is invalid".
-        // auto_throw used to return 0 when nothing had been pushed onto the
-        // stack, so a failure hdf5 declined to describe became a
-        // plausible-looking success value -- which callers then assigned into
-        // _self as an identifier.
+        // The contract is "throw if and only if the return value is
+        // invalid", which has to hold even when hdf5 declines to describe the
+        // failure. Returning 0 for those hands callers a plausible-looking
+        // value that they assign into _self as an identifier.
         H5Eclear2(H5E_DEFAULT);
         CHECK_THROWS_AS(check_error(-1), arf::Exception);
         H5Eclear2(H5E_DEFAULT);
@@ -82,11 +81,10 @@ TEST_CASE("the message says whether hdf5 explained itself") {
 }
 
 TEST_CASE("the bool overload throws whatever the stack holds") {
-        // Whether `false` raised used to depend on whether some *earlier* call
-        // had left an entry on the stack, which made == and != on datatypes
-        // order-dependent. Now it is unconditional -- which is why those
-        // operators check the htri_t from H5Tequal rather than passing the
-        // comparison's result through here.
+        // Unconditional, so the outcome cannot depend on whether an earlier
+        // call left something on the stack. This is why == and != on datatypes
+        // check the htri_t from H5Tequal rather than passing the comparison's
+        // result through here: a bool is not how hdf5 reports failure.
         H5Eclear2(H5E_DEFAULT);
         CHECK_THROWS_AS(check_error(false), arf::Exception);
 

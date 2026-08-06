@@ -73,8 +73,9 @@ assign(Type & target, Type const & source)
 }
 
 TEST_CASE("self-assignment is safe") {
-        // this used to close _self and then copy from the handle it had just
-        // closed, so assigning an object to itself threw "not a dataspace"
+        // closing _self before copying from the argument looks equivalent to
+        // copy-and-swap and is not: when they are the same object it copies
+        // from the handle it just closed
         arftest::handle_guard guard;
 
         arf::h5s::dataspace space(std::vector<hsize_t>(1, 8));

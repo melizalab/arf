@@ -157,10 +157,9 @@ TEST_CASE("replace drops an existing table") {
 
 TEST_CASE("packet tables release both of their handles") {
         // A packet table holds two: the H5PT handle and the dataset
-        // underneath it. ~packet_table used to guard H5PTclose with
-        // `H5PTis_valid(...) > 0`, but H5PTis_valid returns herr_t, where 0
-        // means valid -- not htri_t like H5Iis_valid. The guard was false for
-        // exactly the tables that needed closing, so none was ever closed.
+        // underneath it. Note that H5PTis_valid returns herr_t, where 0 means
+        // valid -- not htri_t like H5Iis_valid. Guarding H5PTclose with
+        // `> 0` is therefore false for exactly the tables that need closing.
         arftest::scratch_file scratch("pt_leak");
         file f(scratch.path, "w");
         group entry(f, "entry", true);
@@ -174,11 +173,9 @@ TEST_CASE("packet tables release both of their handles") {
 }
 
 TEST_CASE("creating over an existing table without replace throws") {
-        // create_packet_table used to skip the existence check that
-        // create_dataset has, so H5PTcreate_fl ran over the existing link and
-        // failed -- returning -1 while leaving hdf5's error stack *empty*,
-        // which the old check_error turned into 0. The caller got a half-built
-        // object aliasing the original dataset, whose writes went nowhere.
+        // The existence check has to happen here, not in H5PTcreate_fl:
+        // that fails on an existing link by returning -1 while leaving hdf5's
+        // error stack empty, so there is nothing for check_error to report.
         arftest::handle_guard guard;
         arftest::scratch_file scratch("pt_noreplace");
         file f(scratch.path, "w");

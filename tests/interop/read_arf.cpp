@@ -6,7 +6,7 @@
  *
  * Covers both storage forms deliberately: arf.py writes variable-length string
  * attributes, and this library writes fixed-length ones, so reading its files
- * exercises the path that used to be unreachable from C++.
+ * exercises the storage form the C++ reader would otherwise never meet.
  *
  *     read_arf <path>
  */
@@ -116,8 +116,8 @@ main(int argc, char ** argv)
                 check(spikes_units.read_attribute<std::string>("units") == "s",
                       "spike units should be readable");
 
-                // the uuid is fixed-length and exactly 36 bytes, with no room
-                // for a terminator -- the case that used to read past the end
+                // fixed-length and exactly 36 bytes, with no room for a
+                // terminator: scanning for one runs off the end
                 check(first.has_attribute("uuid"), "entry needs a uuid");
                 check(first.read_attribute<std::string>("uuid").size() == 36,
                       "uuid should read back as 36 characters");

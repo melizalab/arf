@@ -88,7 +88,7 @@ TEST_CASE("name reports the path the file was opened with") {
         arftest::handle_guard guard;
         arftest::scratch_file scratch("f_name");
         file f(scratch.path, "w");
-        CHECK(f.name() == scratch.path);
+        CHECK(f.filename() == scratch.path);
 }
 
 TEST_CASE("size grows as data is written") {

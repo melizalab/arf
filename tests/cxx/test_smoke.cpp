@@ -39,7 +39,7 @@ TEST_CASE("a new file carries the arf version attributes") {
         CHECK(f.read_attribute<std::string>("arf_version") == ARF_VERSION);
         CHECK(f.read_attribute<std::string>("arf_library") == "c++");
         CHECK(f.read_attribute<std::string>("arf_library_version") == ARF_LIBRARY_VERSION);
-        CHECK(f.name() == scratch.path);
+        CHECK(f.filename() == scratch.path);
 }
 
 TEST_CASE("an entry stores its timestamp and uuid") {
