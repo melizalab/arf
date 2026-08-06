@@ -309,3 +309,121 @@ def test_units_stored_as_bytes(tmp_entry):
     )
     sampled.attrs.create("units", b"mV", dtype="|S3")
     assert arf.is_time_series(sampled)
+
+
+def test_string_data_is_rejected_with_a_useful_error(tmp_entry):
+    """The check used to run only on input that had to be converted.
+
+    A numpy string array has a dtype already, so it skipped validation and
+    failed later inside h5py with "No conversion path for dtype".
+    """
+    with pytest.raises(ValueError, match="numeric or compound"):
+        arf.create_dataset(tmp_entry, "list", ["a", "b"], units="s")
+    with pytest.raises(ValueError, match="numeric or compound"):
+        arf.create_dataset(tmp_entry, "numpy", np.array(["a", "b"]), units="s")
+    with pytest.raises(ValueError, match="numeric or compound"):
+        arf.create_dataset(tmp_entry, "object", np.array([object()]), units="s")
+
+
+def test_select_interval_on_an_empty_dataset(tmp_entry):
+    """The guard tested idx.size, which is the length of the mask.
+
+    For an empty dataset that returned the mask itself -- a bool array where
+    the caller expects the dataset's dtype.
+    """
+    dset = arf.create_dataset(
+        tmp_entry,
+        "empty",
+        np.array([], dtype="f8"),
+        units="s",
+        datatype=arf.DataTypes.SPIKET,
+        maxshape=(None,),
+    )
+    data, offset = arf.select_interval(dset, 0.0, 1.0)
+    assert data.dtype == np.dtype("f8")
+    assert len(data) == 0
+    assert offset == 0
+
+
+def test_select_interval_respects_units_not_sampling_rate(tmp_entry):
+    """A real-valued point process may legitimately carry a sampling_rate.
+
+    The window used to be rescaled whenever the attribute was present, so a
+    one-second window over times in seconds selected the first thousand
+    seconds instead.
+    """
+    times = np.array([0.5, 5.0, 900.0])
+    seconds = arf.create_dataset(
+        tmp_entry,
+        "in_seconds",
+        times,
+        units="s",
+        sampling_rate=1000,
+        datatype=arf.DataTypes.SPIKET,
+    )
+    data, offset = arf.select_interval(seconds, 0.0, 1.0)
+    assert list(data) == [0.5]
+    assert offset == 0
+
+    # times in samples are still rescaled, because they have to be
+    samples = arf.create_dataset(
+        tmp_entry,
+        "in_samples",
+        np.array([500, 5000, 900000]),
+        units="samples",
+        sampling_rate=1000,
+        datatype=arf.DataTypes.SPIKET,
+    )
+    data, offset = arf.select_interval(samples, 0.0, 1.0)
+    assert list(data) == [500]
+    assert offset == 0
+
+
+def test_select_interval_on_a_time_series(tmp_entry):
+    dset = arf.create_dataset(
+        tmp_entry, "pcm", np.arange(2000, dtype="f8"), units="mV", sampling_rate=1000
+    )
+    data, offset = arf.select_interval(dset, 0.5, 1.0)
+    assert offset == 500
+    assert len(data) == 500
+    assert data[0] == 500.0
+
+
+def test_timestamp_honors_timezone():
+    """mktime(timetuple()) read the wall-clock fields as local time.
+
+    An aware datetime was therefore recorded as the wrong instant, off by the
+    local zone offset.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    aware = datetime(2020, 1, 1, 12, 0, 30, 123456, tzinfo=timezone.utc)
+    ts = arf.convert_timestamp(aware)
+    assert ts[0] == int(aware.replace(microsecond=0).timestamp())
+    assert ts[1] == 123456
+    assert arf.timestamp_to_float(ts) == pytest.approx(aware.timestamp())
+
+    # two aware datetimes naming the same instant convert identically
+    other = aware.astimezone(timezone(timedelta(hours=5)))
+    assert list(arf.convert_timestamp(other)) == list(ts)
+
+    # a naive datetime is still read as local time, as it always was
+    naive = datetime(2020, 1, 1, 12, 0, 30)
+    assert arf.convert_timestamp(naive)[0] == int(naive.timestamp())
+
+
+def test_timestamp_before_the_epoch():
+    """The microseconds are the remainder after the second, so never negative."""
+    ts = arf.convert_timestamp(-1.5)
+    assert ts[1] >= 0
+    assert arf.timestamp_to_float(ts) == pytest.approx(-1.5)
+
+    ts = arf.convert_timestamp(1234567890.125)
+    assert list(ts) == [1234567890, 125000]
+
+
+def test_check_file_version_reports_bad_versions(tmp_file):
+    """packaging's InvalidVersion used to escape to the caller."""
+    tmp_file.attrs["arf_version"] = "not-a-version"
+    with pytest.raises(UserWarning, match="Unparseable"):
+        arf.check_file_version(tmp_file)

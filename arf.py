@@ -26,7 +26,7 @@ ArfTimeStamp = np.ndarray
 Datashape = Tuple[int, ...]
 
 spec_version = "2.1"
-__version__ = "2.7.2"
+__version__ = "2.7.3"
 version = __version__
 
 
@@ -46,15 +46,15 @@ class DataTypes(IntEnum):
     EXTRAC_EEG = 4
     INTRAC_CC = 5
     INTRAC_VC = 6
-    
+
     EVENT = 1000
     SPIKET = 1001
     BEHAVET = 1002
-    
+
     INTERVAL = 2000
     STIMI = 2001
     COMPONENTL = 2002
-    
+
 
 def open_file(
     path: Union[Path, str],
@@ -197,8 +197,11 @@ def create_dataset(
     # check data validity before doing anything
     if not hasattr(data, "dtype"):
         data = asarray(data)
-        if data.dtype.kind in ("S", "O", "U"):
-            raise ValueError("data must be in array with numeric or compound type")
+    # NB: outside the branch above. This check used to run only on input that
+    # had to be converted, so a numpy string array skipped it and failed later
+    # inside h5py with an opaque "No conversion path for dtype" TypeError.
+    if data.dtype.kind in ("S", "O", "U"):
+        raise ValueError("data must be in array with numeric or compound type")
     if data.dtype.kind == "V":
         if "start" not in data.dtype.names:
             raise ValueError("complex event data requires 'start' field")
@@ -253,12 +256,14 @@ def select_interval(dset: h5.Dataset, begin: float, end: float):
     Returns (values, offset)
 
     """
-    try:
+    # Rescale the window only when the dataset's own times are in samples.
+    # This used to key on the presence of sampling_rate, but the spec permits a
+    # real-valued point process to carry one, and for those a window of [0, 1)
+    # seconds was silently reinterpreted as [0, 1000) samples.
+    if _sample_timebase(dset):
         Fs = dset.attrs["sampling_rate"]
         begin = int(begin * Fs)
         end = int(end * Fs)
-    except KeyError:
-        pass
 
     if is_marked_pointproc(dset):
         t = dset["start"]
@@ -266,15 +271,15 @@ def select_interval(dset: h5.Dataset, begin: float, end: float):
         data = dset[idx]
         data["start"] -= begin
     elif is_time_series(dset):
-        idx = slice(begin, end)
-        data = dset[idx]
+        data = dset[slice(begin, end)]
     else:
         t = dset[:]
         idx = (t >= begin) & (t < end)
-        if idx.size > 0:
-            data = dset[idx] - begin
-        else:
-            data = idx
+        # NB: unconditional. The guard used to be `if idx.size > 0`, but idx is
+        # the boolean mask, so its size is the length of the dataset rather
+        # than the number of matches -- and an empty dataset returned the mask
+        # itself, a bool array where the caller expects the dataset's dtype.
+        data = dset[idx] - begin
     return data, begin
 
 
@@ -288,7 +293,7 @@ def check_file_version(file: h5.File):
     Returns the version for the file
 
     """
-    from packaging.version import Version
+    from packaging.version import InvalidVersion, Version
 
     try:
         ver = file.attrs.get("arf_version", None)
@@ -305,7 +310,15 @@ def check_file_version(file: h5.File):
     except (LookupError, AttributeError):
         pass
     # should be backwards compatible after 1.1
-    file_version = Version(ver)
+    try:
+        file_version = Version(ver)
+    except InvalidVersion as err:
+        # the documented contract is to signal with one of the three warning
+        # types; letting packaging's exception out crashed the caller instead
+        raise UserWarning(
+            f"Unparseable ARF version {ver!r} for {file.filename};"
+            "created by another program?"
+        ) from err
     if file_version < Version("1.1"):
         raise DeprecationWarning(
             f"ARF library {version} may have trouble reading file "
@@ -370,19 +383,30 @@ def convert_timestamp(obj: Timestamp) -> ArfTimeStamp:
     between float and integer tuple may not be reversible.
 
     """
+    from math import floor
+
     from numpy import zeros
 
     out = zeros(2, dtype="int64")
     if isinstance(obj, datetime):
-        out[0] = mktime(obj.timetuple())
+        # NB: timestamp(), not mktime(timetuple()). The latter reads the
+        # wall-clock fields as *local* time and discards any tzinfo, so an
+        # aware datetime was recorded as the wrong instant. For a naive
+        # datetime timestamp() also assumes local time, which is what the old
+        # code did, so nothing changes there.
+        out[0] = int(obj.replace(microsecond=0).timestamp())
         out[1] = obj.microsecond
     elif isinstance(obj, struct_time):
         out[0] = mktime(obj)
     elif isinstance(obj, numbers.Integral):
         out[0] = obj
     elif isinstance(obj, numbers.Real):
-        out[0] = obj
-        out[1] = (obj - out[0]) * 1e6
+        # floor, not truncation: the microseconds are the remainder *after*
+        # the second, and a pre-epoch value like -1.5 used to come out as
+        # (-1, -500000), which is not a time the spec can express
+        seconds = floor(obj)
+        out[0] = seconds
+        out[1] = round((obj - seconds) * 1e6)
     else:
         try:
             out[:2] = obj[:2]
@@ -455,6 +479,29 @@ def _decode_attribute(value):
     if isinstance(value, bytes):
         return value.decode("utf-8", "replace")
     return value
+
+
+def _sample_timebase(dset: h5.Dataset) -> bool:
+    """Return True if the times in dset are counted in samples rather than seconds.
+
+    Sampled data is indexed by sample by construction. Event data says so in
+    its units, which for a compound dataset is the entry for the 'start' field.
+
+    """
+    if "sampling_rate" not in dset.attrs:
+        return False
+    if is_time_series(dset):
+        return True
+    units = dset.attrs.get("units", None)
+    if is_marked_pointproc(dset):
+        names = dset.dtype.names
+        if units is None or "start" not in names:
+            return False
+        try:
+            units = units[names.index("start")]
+        except (IndexError, TypeError):
+            return False
+    return _decode_attribute(units) == "samples"
 
 
 def is_time_series(dset: h5.Dataset) -> bool:
