@@ -39,14 +39,19 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libhdf5-dev libboost-dev pkg-config
+          sudo apt-get install -y libhdf5-dev pkg-config
 
       - name: Install libraries (macOS)
         if: runner.os == 'macOS'
-        run: brew install hdf5 boost pkgconf
+        run: brew install hdf5 pkgconf
 
       - name: make ${{ matrix.target }}
         run: make ${{ matrix.target }}
+
+      # a missing include is invisible to the suite, since arf.hpp pulls
+      # everything in an order that happens to work
+      - name: make check-headers
+        run: make check-headers
 
   lint:
     name: strict warnings
@@ -56,6 +61,6 @@ jobs:
       - name: Install libraries
         run: |
           sudo apt-get update
-          sudo apt-get install -y libhdf5-dev libboost-dev pkg-config
+          sudo apt-get install -y libhdf5-dev pkg-config
       - name: make lint-strict
         run: make lint-strict

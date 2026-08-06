@@ -69,8 +69,8 @@ support h5py 2 was ``2.6.7``. To install the module:
 
    pip install arf
 
-To use the C++ interface, you need boost>=1.42 (http://boost.org). In
-addition, if writing multithreaded code, HDF5 needs to be compiled with
+The C++ interface needs only HDF5 and a C++11 compiler; it has no other
+dependencies. If writing multithreaded code, HDF5 needs to be compiled with
 ``--enable-threadsafe``. The interface is header-only and does not need
 to be compiled. To install:
 

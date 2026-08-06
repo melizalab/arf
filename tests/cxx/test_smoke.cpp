@@ -50,7 +50,7 @@ TEST_CASE("an entry stores its timestamp and uuid") {
         REQUIRE(created.has_attribute("timestamp"));
         REQUIRE(created.has_attribute("uuid"));
 
-        std::vector<boost::int64_t> timestamp;
+        std::vector<std::int64_t> timestamp;
         created.read_attribute("timestamp", timestamp);
         REQUIRE(timestamp.size() == 2);
         CHECK(timestamp[0] == 1234567890);

@@ -12,10 +12,12 @@
 #ifndef _H5S_H
 #define _H5S_H 1
 
-#include <vector>
+#include <cassert>
 #include <cmath>
 #include <numeric>
+#include <vector>
 #include "hdf5.hpp"
+#include "h5e.hpp"
 
 namespace arf { namespace h5s {
 

@@ -15,7 +15,7 @@
 #include <algorithm>
 #include <limits>
 #include <type_traits>
-#include <boost/uuid/uuid.hpp>
+#include "uuid.hpp"
 #include "hdf5.hpp"
 #include "h5e.hpp"
 
@@ -121,7 +121,7 @@ struct datatype_traits<char const *> {
  * in the specification is as a hex-encoded string.
  */
 template<>
-struct datatype_traits<boost::uuids::uuid> {
+struct datatype_traits<uuid> {
         static hid_t value() {
                 hid_t v = H5Tcopy(H5T_NATIVE_CHAR); // 128-bit integer
                 H5Tset_size(v, 16);

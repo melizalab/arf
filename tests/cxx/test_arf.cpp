@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include <boost/cstdint.hpp>
+#include <cstdint>
 
 #include "arf.hpp"
 #include "fixtures.hpp"
@@ -109,7 +109,7 @@ TEST_CASE("an entry stores the timestamp the spec requires") {
         CHECK(attribute_width(e, "timestamp") == 8);
         CHECK(attribute_count(e, "timestamp") == 2);
 
-        std::vector<boost::int64_t> timestamp;
+        std::vector<std::int64_t> timestamp;
         e.read_attribute("timestamp", timestamp);
         REQUIRE(timestamp.size() == 2);
         CHECK(timestamp[0] == 1234567890);
@@ -121,14 +121,14 @@ TEST_CASE("a timestamp can also be supplied as a vector") {
         arftest::scratch_file scratch("arf_timestamp_vec");
         arf::file f(scratch.path, "w");
 
-        std::vector<boost::int32_t> supplied;
+        std::vector<std::int32_t> supplied;
         supplied.push_back(99);
         supplied.push_back(1000);
         arf::entry e(f, "entry_000", supplied);
 
         // narrower input is widened to the required 64 bits on the way in
         CHECK(attribute_width(e, "timestamp") == 8);
-        std::vector<boost::int64_t> timestamp;
+        std::vector<std::int64_t> timestamp;
         e.read_attribute("timestamp", timestamp);
         REQUIRE(timestamp.size() == 2);
         CHECK(timestamp[0] == 99);
@@ -145,7 +145,7 @@ TEST_CASE("an entry gets a uuid that survives reopening") {
 
         arf::entry reopened(f, "entry_000");
         CHECK(reopened.uuid() == created.uuid());
-        CHECK(boost::uuids::to_string(reopened.uuid()).size() == 36);
+        CHECK(reopened.uuid().str().size() == 36);
 }
 
 TEST_CASE("the uuid attribute is exactly 36 bytes, as the spec requires") {

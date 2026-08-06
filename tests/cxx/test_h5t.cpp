@@ -4,8 +4,7 @@
 
 #include <string>
 
-#include <boost/cstdint.hpp>
-#include <boost/uuid/uuid.hpp>
+#include <cstdint>
 
 #include "arf.hpp"
 #include "fixtures.hpp"
@@ -28,22 +27,22 @@ TEST_SUITE("h5t") {
 
 TEST_CASE("integer traits map to fixed-width native types") {
         SUBCASE("signed") {
-                CHECK(make<boost::int8_t>().size() == 1);
-                CHECK(make<boost::int16_t>().size() == 2);
-                CHECK(make<boost::int32_t>().size() == 4);
-                CHECK(make<boost::int64_t>().size() == 8);
-                CHECK(H5Tget_sign(make<boost::int32_t>().hid()) == H5T_SGN_2);
+                CHECK(make<std::int8_t>().size() == 1);
+                CHECK(make<std::int16_t>().size() == 2);
+                CHECK(make<std::int32_t>().size() == 4);
+                CHECK(make<std::int64_t>().size() == 8);
+                CHECK(H5Tget_sign(make<std::int32_t>().hid()) == H5T_SGN_2);
         }
         SUBCASE("unsigned") {
-                CHECK(make<boost::uint8_t>().size() == 1);
-                CHECK(make<boost::uint16_t>().size() == 2);
-                CHECK(make<boost::uint32_t>().size() == 4);
-                CHECK(make<boost::uint64_t>().size() == 8);
-                CHECK(H5Tget_sign(make<boost::uint32_t>().hid()) == H5T_SGN_NONE);
+                CHECK(make<std::uint8_t>().size() == 1);
+                CHECK(make<std::uint16_t>().size() == 2);
+                CHECK(make<std::uint32_t>().size() == 4);
+                CHECK(make<std::uint64_t>().size() == 8);
+                CHECK(H5Tget_sign(make<std::uint32_t>().hid()) == H5T_SGN_NONE);
         }
         SUBCASE("all of them are integers") {
-                CHECK(H5Tget_class(make<boost::int16_t>().hid()) == H5T_INTEGER);
-                CHECK(H5Tget_class(make<boost::uint64_t>().hid()) == H5T_INTEGER);
+                CHECK(H5Tget_class(make<std::int16_t>().hid()) == H5T_INTEGER);
+                CHECK(H5Tget_class(make<std::uint64_t>().hid()) == H5T_INTEGER);
         }
 }
 
@@ -85,8 +84,8 @@ TEST_CASE("strings are fixed-length and declared UTF-8") {
 
 TEST_CASE("uuids are stored as 16 raw bytes") {
         // the spec prefers the 36-byte hex string, but this trait is the
-        // 128-bit form; arf::entry writes the string via boost::uuids::to_string
-        datatype t = make<boost::uuids::uuid>();
+        // 128-bit form; arf::entry writes the string via uuid::str()
+        datatype t = make<arf::uuid>();
         CHECK(t.size() == 16);
 }
 
@@ -130,7 +129,7 @@ TEST_CASE("constructing from a hid_t adopts the handle") {
 TEST_CASE("equality compares the underlying types") {
         H5Eclear2(H5E_DEFAULT);
         CHECK(make<float>() == make<float>());
-        CHECK(make<boost::int32_t>() == make<boost::int32_t>());
+        CHECK(make<std::int32_t>() == make<std::int32_t>());
         CHECK_FALSE(make<float>() == make<double>());
         CHECK(make<float>() != make<double>());
 }

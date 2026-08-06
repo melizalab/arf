@@ -12,13 +12,8 @@
 #ifndef _ARF_HH
 #define _ARF_HH 1
 
-// don't include extra headers
-#define BOOST_UUID_NO_TYPE_TRAITS
-#include <boost/uuid/random_generator.hpp>
-#include <boost/uuid/string_generator.hpp>
-#include <boost/uuid/uuid_io.hpp>
-
 #include "arf/types.hpp"
+#include "arf/uuid.hpp"
 #include "arf/h5e.hpp"
 #include "arf/h5f.hpp"
 #include "arf/h5a.hpp"
@@ -54,7 +49,6 @@ namespace arf {
  * valgrind testing notes:
  *
  * hdf5 needs to be compiled with --enable-using-memchecker
- * boost::uuid causes a lot of uninitialized memory errors, but this is intentional
  *
  */
 
@@ -75,7 +69,7 @@ public:
                 if (has_attribute("uuid")) {
                         std::string s;
                         read_attribute("uuid",s);
-                        _uuid = boost::uuids::string_generator()(s);
+                        _uuid = arf::uuid::parse(s);
                 }
         }
 
@@ -84,24 +78,24 @@ public:
         entry(h5a::node const & parent, std::string const & name,
               std::vector<Type> const & timestamp)
                 : h5g::group(parent, name, true),
-                  _uuid(boost::uuids::random_generator()()) {
+                  _uuid(arf::uuid::generate()) {
                 write_attribute<std::int64_t, Type>("timestamp", timestamp);
                 // to_string gives 36 characters, and string attributes are
                 // sized to exactly their content, so this is the 36-byte
                 // H5T_STRING the specification asks for
-                write_attribute("uuid", boost::uuids::to_string(_uuid));
+                write_attribute("uuid", _uuid.str());
         }
 
         entry(h5a::node const & parent, std::string const & name,
               std::int64_t tv_sec, std::int64_t tv_usec=0)
                 : h5g::group(parent, name, true),
-                  _uuid(boost::uuids::random_generator()()) {
+                  _uuid(arf::uuid::generate()) {
                 std::int64_t ts[2] = { tv_sec, tv_usec };
                 write_attribute("timestamp", ts, 2);
                 // to_string gives 36 characters, and string attributes are
                 // sized to exactly their content, so this is the 36-byte
                 // H5T_STRING the specification asks for
-                write_attribute("uuid", boost::uuids::to_string(_uuid));
+                write_attribute("uuid", _uuid.str());
         }
 
         /**
@@ -184,10 +178,10 @@ public:
                 return pt;
         }
 
-        boost::uuids::uuid const & uuid() const { return _uuid; }
+        arf::uuid const & uuid() const { return _uuid; }
 
 private:
-        boost::uuids::uuid _uuid;
+        arf::uuid _uuid;
 };
 
 /**

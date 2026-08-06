@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-#include <boost/cstdint.hpp>
+#include <cstdint>
 
 #include "arf.hpp"
 #include "fixtures.hpp"
@@ -29,8 +29,8 @@ int const npackets = 5;
 
 struct interval {
         char name[64];
-        boost::uint32_t start;
-        boost::uint32_t stop;
+        std::uint32_t start;
+        std::uint32_t stop;
 };
 
 std::string
@@ -146,7 +146,7 @@ TEST_CASE("a file of many entries round trips") {
                         e.read_attribute("vecattr", vec);
                         CHECK(vec == vector_attribute());
 
-                        std::vector<boost::int64_t> timestamp;
+                        std::vector<std::int64_t> timestamp;
                         e.read_attribute("timestamp", timestamp);
                         REQUIRE(timestamp.size() == 2);
                         CHECK(timestamp[0] == 1234567890 + (nentries - i - 1));
@@ -172,11 +172,11 @@ TEST_CASE("entries keep their uuid across a close and reopen") {
         {
                 arf::file f(scratch.path, "w");
                 arf::entry e(f, "entry_000", 1, 0);
-                first = boost::uuids::to_string(e.uuid());
+                first = e.uuid().str();
         }
         arf::h5f::file f(scratch.path, "r");
         arf::entry reopened(f, "entry_000");
-        CHECK(boost::uuids::to_string(reopened.uuid()) == first);
+        CHECK(reopened.uuid().str() == first);
 }
 
 }

@@ -8,6 +8,7 @@
 #   make test-sanitize     same, under AddressSanitizer + UBSan
 #   make test-all          all three
 #   make lint-strict       -Wpedantic -Werror syntax check
+#   make check-headers     compile each header on its own
 #   make install           install the headers under $(PREFIX)
 #
 # Objects go to build/$(VARIANT)/. Sanitizers require a glibc target.
@@ -29,23 +30,12 @@ HDF5_CFLAGS ?= $(shell $(PKG_CONFIG) --cflags $(HDF5_PC) 2>/dev/null)
 # default search path
 HDF5_LIBS   ?= $(shell $(PKG_CONFIG) --libs $(HDF5_PC) 2>/dev/null) -lhdf5_hl
 
-# boost ships no pkg-config file; pick up the usual MacPorts/Homebrew prefixes
-# when they are actually present.
-ifneq ($(wildcard /opt/local/include/boost),)
-BOOST_CFLAGS  ?= -I/opt/local/include
-BOOST_LDFLAGS ?= -L/opt/local/lib
-endif
-ifneq ($(wildcard /opt/homebrew/include/boost),)
-BOOST_CFLAGS  ?= -I/opt/homebrew/include
-BOOST_LDFLAGS ?= -L/opt/homebrew/lib
-endif
-
 ifeq ($(strip $(HDF5_PC)$(HDF5_CFLAGS)),)
   $(warning no hdf5 pkg-config module found: tried hdf5 and hdf5-serial.)
   $(warning Install the hdf5 development package, or set HDF5_CFLAGS and HDF5_LIBS.)
 endif
 
-INCLUDES = -Ic++ -Itests/vendor $(HDF5_CFLAGS) $(BOOST_CFLAGS)
+INCLUDES = -Ic++ -Itests/vendor $(HDF5_CFLAGS)
 
 VARIANT ?= plain
 ifeq ($(VARIANT),plain)
@@ -63,7 +53,7 @@ else
 endif
 
 ALL_CXXFLAGS = $(CXXSTD) $(WARN) $(VARIANT_CXXFLAGS) $(INCLUDES) -MMD -MP $(CXXFLAGS)
-ALL_LDFLAGS  = $(VARIANT_LDFLAGS) $(BOOST_LDFLAGS) $(LDFLAGS)
+ALL_LDFLAGS  = $(VARIANT_LDFLAGS) $(LDFLAGS)
 
 OBJDIR     := build/$(VARIANT)
 TEST_SRCS  := $(sort $(wildcard tests/cxx/*.cpp))
@@ -83,7 +73,8 @@ $(shell mkdir -p $(OBJDIR) && printf '%s\n' $(TEST_SRCS) | \
 	cmp -s - $(SRC_STAMP) 2>/dev/null || printf '%s\n' $(TEST_SRCS) > $(SRC_STAMP))
 
 .PHONY: all test test-release test-sanitize test-all build-tests interop \
-        test-interop golden-update check-sanitizers lint-strict clean install
+        test-interop golden-update check-sanitizers lint-strict check-headers \
+        clean install
 
 all: test
 
@@ -156,6 +147,24 @@ check-sanitizers:
 lint-strict:
 	$(CXX) $(CXXSTD) -Wall -Wextra -Wpedantic -Werror -fsyntax-only \
 		$(INCLUDES) $(TEST_SRCS)
+
+# Every header must compile on its own. The test suite cannot catch a missing
+# include, because arf.hpp pulls everything in an order that happens to work --
+# which is exactly how five headers came to depend on <cassert> arriving
+# transitively.
+check-headers:
+	@rc=0; \
+	for h in c++/arf.hpp c++/arf/*.hpp; do \
+		printf '#include "%s"\n' "$${h#c++/}" > $(OBJDIR)/.header_check.cpp; \
+		if $(CXX) $(CXXSTD) $(WARN) $(INCLUDES) -fsyntax-only \
+			$(OBJDIR)/.header_check.cpp 2>/dev/null; then \
+			printf '  ok    %s\n' "$$h"; \
+		else \
+			printf '  FAILS %s\n' "$$h"; rc=1; \
+		fi; \
+	done; \
+	rm -f $(OBJDIR)/.header_check.cpp; \
+	exit $$rc
 
 clean:
 	rm -rf build

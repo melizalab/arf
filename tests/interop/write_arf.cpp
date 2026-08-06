@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-#include <boost/cstdint.hpp>
+#include <cstdint>
 
 #include "arf.hpp"
 
@@ -27,8 +27,8 @@ int const nintervals = 4;
 
 struct interval {
         char name[32];
-        boost::uint32_t start;
-        boost::uint32_t stop;
+        std::uint32_t start;
+        std::uint32_t stop;
 };
 
 }
@@ -92,7 +92,7 @@ main(int argc, char ** argv)
 
                         // simple event data on a discrete timebase: the spec
                         // requires units of "samples" plus a sampling_rate
-                        std::vector<boost::int32_t> ticks;
+                        std::vector<std::int32_t> ticks;
                         for (int j = 0; j < nspikes; ++j)
                                 ticks.push_back(j * 200 + i);
                         arf::h5d::dataset discrete =

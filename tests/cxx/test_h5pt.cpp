@@ -5,7 +5,7 @@
 #include <cstring>
 #include <vector>
 
-#include <boost/cstdint.hpp>
+#include <cstdint>
 
 #include "arf.hpp"
 #include "fixtures.hpp"
@@ -18,8 +18,8 @@ namespace {
 /** A compound record, the shape arf uses for marked point processes. */
 struct interval {
         char name[64];
-        boost::uint32_t start;
-        boost::uint32_t stop;
+        std::uint32_t start;
+        std::uint32_t stop;
 };
 
 }
@@ -64,12 +64,12 @@ TEST_CASE("packets can be written from a bare pointer") {
         file f(scratch.path, "w");
         group entry(f, "entry", true);
 
-        arf::h5pt::packet_table pt = entry.create_packet_table<boost::uint32_t>("stream");
-        boost::uint32_t values[4] = { 10, 20, 30, 40 };
+        arf::h5pt::packet_table pt = entry.create_packet_table<std::uint32_t>("stream");
+        std::uint32_t values[4] = { 10, 20, 30, 40 };
         pt.write(values, 4);
         CHECK(pt.dataspace().size() == 4);
 
-        std::vector<boost::uint32_t> read;
+        std::vector<std::uint32_t> read;
         pt.read(read);
         REQUIRE(read.size() == 4);
         CHECK(read[0] == 10);

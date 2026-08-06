@@ -12,8 +12,11 @@
 #ifndef _H5D_H
 #define _H5D_H 1
 
+#include <cassert>
+
 #include "hdf5.hpp"
 #include "h5a.hpp"
+#include "h5p.hpp"
 
 namespace arf { namespace h5d {
 

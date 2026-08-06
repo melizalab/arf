@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include <boost/cstdint.hpp>
+#include <cstdint>
 
 #include "arf.hpp"
 #include "fixtures.hpp"
@@ -37,13 +37,13 @@ TEST_CASE("scalar attributes round trip") {
         node.write_attribute("an_int", 42);
         node.write_attribute("a_float", 2.5f);
         node.write_attribute("a_double", 1.0 / 3.0);
-        node.write_attribute("a_long", static_cast<boost::int64_t>(1) << 40);
+        node.write_attribute("a_long", static_cast<std::int64_t>(1) << 40);
 
         CHECK(node.read_attribute<int>("an_int") == 42);
         CHECK(node.read_attribute<float>("a_float") == 2.5f);
         CHECK(node.read_attribute<double>("a_double") == doctest::Approx(1.0 / 3.0));
-        CHECK(node.read_attribute<boost::int64_t>("a_long")
-              == (static_cast<boost::int64_t>(1) << 40));
+        CHECK(node.read_attribute<std::int64_t>("a_long")
+              == (static_cast<std::int64_t>(1) << 40));
 }
 
 TEST_CASE("vector attributes round trip") {
@@ -180,7 +180,7 @@ TEST_CASE("the storage type can differ from the memory type") {
         group node(f, "entry", true);
 
         // store a plain int as 64-bit, the way arf::entry stores timestamps
-        node.write_attribute<boost::int64_t, int>("stored_wide", 7);
+        node.write_attribute<std::int64_t, int>("stored_wide", 7);
         attribute attr(node, "stored_wide");
         hid_t stored = H5Aget_type(attr.hid());
         CHECK(H5Tget_size(stored) == 8);

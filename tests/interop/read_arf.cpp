@@ -15,7 +15,7 @@
 #include <string>
 #include <vector>
 
-#include <boost/cstdint.hpp>
+#include <cstdint>
 
 #include "arf.hpp"
 
@@ -62,7 +62,7 @@ main(int argc, char ** argv)
                         check(e.has_attribute("timestamp"), "entry needs a timestamp");
                         check(e.has_attribute("uuid"), "entry needs a uuid");
 
-                        std::vector<boost::int64_t> timestamp;
+                        std::vector<std::int64_t> timestamp;
                         e.read_attribute("timestamp", timestamp);
                         check(timestamp.size() == 2,
                               "timestamp should have two elements");
