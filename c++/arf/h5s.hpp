@@ -79,7 +79,7 @@ public:
 	explicit dataspace(hid_t hid) : handle(hid) {}
 
 	explicit dataspace(std::vector<hsize_t> const & dims) {
-		_self = h5e::check_error(H5Screate_simple(dims.size(), &dims[0], NULL));
+		_self = h5e::check_error(H5Screate_simple(dims.size(), dims.data(), NULL));
 	}
 
 	dataspace & operator= (dataspace const & other) {
@@ -93,9 +93,9 @@ public:
 		  std::vector<hsize_t> const & maxdims) {
 		assert(dims.size() == maxdims.size() || maxdims.empty());
 		if(maxdims.empty())
-			_self = h5e::check_error(H5Screate_simple(dims.size(), &dims[0], NULL));
+			_self = h5e::check_error(H5Screate_simple(dims.size(), dims.data(), NULL));
 		else
-			_self = h5e::check_error(H5Screate_simple(dims.size(), &dims[0], &maxdims[0]));
+			_self = h5e::check_error(H5Screate_simple(dims.size(), dims.data(), maxdims.data()));
 	}
 
 	dataspace(dataspace const & orig,
@@ -104,8 +104,8 @@ public:
 		  std::vector<hsize_t> const & count) {
 		assert((offset.size() == stride.size()) && (stride.size() == count.size()));
 		_self = h5e::check_error(H5Scopy(orig.hid()));
-		h5e::check_error(H5Sselect_hyperslab(_self, H5S_SELECT_SET, &offset[0],
-						     &stride[0], &count[0], NULL));
+		h5e::check_error(H5Sselect_hyperslab(_self, H5S_SELECT_SET, offset.data(),
+						     stride.data(), count.data(), NULL));
 	}
 
 	dataspace(dataspace const & orig,
@@ -116,8 +116,8 @@ public:
 		assert(offset.size() == stride.size() && stride.size() == count.size() &&
 		       count.size() == block.size());
 		_self = h5e::check_error(H5Scopy(orig.hid()));
-		h5e::check_error(H5Sselect_hyperslab(_self, H5S_SELECT_SET, &offset[0],
-						     &stride[0], &count[0], &block[0]));
+		h5e::check_error(H5Sselect_hyperslab(_self, H5S_SELECT_SET, offset.data(),
+						     stride.data(), count.data(), block.data()));
 	}
 
 	~dataspace() {
@@ -131,13 +131,13 @@ public:
 
 	std::vector<hsize_t> dims() const {
 		std::vector<hsize_t> dims(ndims());
-		h5e::check_error(H5Sget_simple_extent_dims(_self, &dims[0], 0));
+		h5e::check_error(H5Sget_simple_extent_dims(_self, dims.data(), 0));
 		return dims;
 	}
 
 	std::vector<hsize_t> maxdims() const {
 		std::vector<hsize_t> dims(ndims());
-		h5e::check_error(H5Sget_simple_extent_dims(_self, 0, &dims[0]));
+		h5e::check_error(H5Sget_simple_extent_dims(_self, 0, dims.data()));
 		return dims;
 	}
 

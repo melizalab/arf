@@ -222,11 +222,32 @@ TEST_CASE("an attribute reports its own name and shape") {
         attribute attr(node, "counts");
         CHECK(attr.name() == "counts");
         CHECK(attr.dataspace()->size() == counts().size());
+}
 
-        // NB: attribute::write(ptr, size) asserts against this size but then
-        // ignores it, writing however many elements the attribute holds. See
-        // backlog item 6. Passing a shorter buffer reads out of bounds, so
-        // there is deliberately no test that does it.
+TEST_CASE("writing an attribute with the wrong length throws") {
+        // H5Awrite always writes the attribute's whole extent, so a shorter
+        // buffer would be read past its end. This used to be an assert, which
+        // said nothing in a release build and let the overrun happen.
+        arftest::handle_guard guard;
+        arftest::scratch_file scratch("a_width");
+        file f(scratch.path, "w");
+        group node(f, "entry", true);
+        node.write_attribute("counts", counts());
+
+        attribute attr(node, "counts");
+        std::vector<int> shorter(2, 1);
+        CHECK_THROWS_AS(attr.write(shorter.data(), shorter.size()), arf::Exception);
+
+        std::vector<int> longer(99, 1);
+        CHECK_THROWS_AS(attr.write(longer.data(), longer.size()), arf::Exception);
+
+        // the right length still works, and the value is unchanged by the
+        // rejected attempts
+        std::vector<int> exact = counts();
+        attr.write(exact.data(), exact.size());
+        std::vector<int> read;
+        node.read_attribute("counts", read);
+        CHECK(read == counts());
 }
 
 TEST_CASE("reading a string attribute releases its datatype") {

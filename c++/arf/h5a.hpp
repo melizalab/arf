@@ -66,13 +66,18 @@ public:
 	void write(Type const * arr, std::size_t size) {
 		h5t::wrapper<Type> t;
 		h5t::datatype type(t);
-		assert(dataspace()->size() >= size);
+		// H5Awrite always writes the attribute's whole extent, so a
+		// buffer of any other length is a mistake: a shorter one gets
+		// read past its end. This used to be an assert, which said
+		// nothing at all in a release build.
+		if (dataspace()->size() != static_cast<hsize_t>(size))
+			throw Exception("attribute write size does not match its extent");
 		h5e::check_error(H5Awrite(_self, type.hid(), arr));
 	}
 
 	template <typename Type>
 	void write(std::vector<Type> const & value) {
-                write(&value[0], value.size());
+                write(value.data(), value.size());
 	}
 
 	/**
@@ -101,8 +106,8 @@ public:
 			return;
 		}
 		std::vector<char> buf(width, '\0');
-		std::memcpy(&buf[0], value.data(), value.size());
-		h5e::check_error(H5Awrite(_self, type.hid(), &buf[0]));
+		std::memcpy(buf.data(), value.data(), value.size());
+		h5e::check_error(H5Awrite(_self, type.hid(), buf.data()));
 	}
 
 
@@ -127,7 +132,7 @@ public:
 		h5t::wrapper<Type> t;
 		h5t::datatype type(t);
                 out.resize(dataspace()->size());
-		h5e::check_error(H5Aread(_self, type.hid(), &out[0]));
+		h5e::check_error(H5Aread(_self, type.hid(), out.data()));
 	}
 
 	/**
@@ -270,7 +275,7 @@ public:
 		std::vector<char> buf(values.size() * width, '\0');
 		for (std::size_t i = 0; i < values.size(); ++i)
 			std::memcpy(&buf[i * width], values[i].data(), values[i].size());
-		h5e::check_error(H5Awrite(attr.hid(), type.hid(), &buf[0]));
+		h5e::check_error(H5Awrite(attr.hid(), type.hid(), buf.data()));
 	}
 
 	template <typename Type>
@@ -285,7 +290,7 @@ public:
 
 	template <typename StorageType, typename MemType>
 	void write_attribute(std::string const & name, std::vector<MemType> const & value) {
-                write_attribute<StorageType,MemType>(name, &value[0], value.size());
+                write_attribute<StorageType,MemType>(name, value.data(), value.size());
         }
 
 	template <typename Type>

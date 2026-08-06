@@ -64,6 +64,20 @@ inline herr_t auto_throw(hid_t estack, void*) {
 }
 
 /**
+ * Stop hdf5 printing its error stack to stderr.
+ *
+ * Failures are reported as exceptions regardless, so the printout is usually
+ * redundant noise. This is *not* called for you: it changes a global setting
+ * in a library the rest of the program may also be using, and opening a file
+ * used to do it as a side effect. Call it once at startup if you want it.
+ */
+inline void
+silence_auto_print()
+{
+	H5Eset_auto2(H5E_DEFAULT, 0, 0);
+}
+
+/**
  * Call this function on any returned HDF5 value to check for an error
  * and throw one if it exists.
  */

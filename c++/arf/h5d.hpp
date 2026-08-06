@@ -71,7 +71,7 @@ public:
 
 	template <typename Type>
 	void write(std::vector<Type> const & data) {
-                write(data.empty() ? 0 : &data[0], data.size());
+                write(data.empty() ? 0 : data.data(), data.size());
         }
 
         /**
@@ -110,13 +110,19 @@ public:
 
 	template <typename Type>
 	void read(std::vector<Type> & data, hsize_t count, hsize_t offset=0, hsize_t stride=1) {
-                read(&data[0], count, offset, stride);
+                // resize first: this used to write through the caller's
+                // existing buffer whatever its length, overflowing whenever it
+                // held fewer than count elements
+                data.resize(count);
+                if (count == 0) return;
+                read(data.data(), count, offset, stride);
         }
 
 	template <typename Type>
 	void read(std::vector<Type> & data) {
                 data.resize(dataspace()->size());
-                read(&data[0], data.size());
+                if (data.empty()) return;
+                read(data.data(), data.size());
         }
 
 
@@ -127,7 +133,7 @@ public:
 	 */
 	void set_extent(std::vector<hsize_t> const & size) {
 		assert(size.size() >= dataspace()->ndims());
-		h5e::check_error(H5Dset_extent(_self, &size[0]));
+		h5e::check_error(H5Dset_extent(_self, size.data()));
 	}
 
 	h5s::dataspace::ptr_type dataspace() const {
@@ -142,7 +148,7 @@ public:
 		int ndims = dataspace()->ndims();
 		hid_t plist = H5Dget_create_plist(_self);
 		std::vector<hsize_t> out(ndims);
-		h5e::check_error(H5Pget_chunk(plist, ndims, &out[0]));
+		h5e::check_error(H5Pget_chunk(plist, ndims, out.data()));
 		H5Pclose(plist);
 		return out;
 	}
@@ -162,7 +168,7 @@ private:
 			throw Exception("Dataset already exists");
 		h5p::proplist dcpl(H5P_DATASET_CREATE);
 		h5e::check_error(H5Pset_layout(dcpl.hid(), H5D_CHUNKED));
-		h5e::check_error(H5Pset_chunk(dcpl.hid(), dspace.ndims(), &chunkdims[0]));
+		h5e::check_error(H5Pset_chunk(dcpl.hid(), dspace.ndims(), chunkdims.data()));
 		// 0 is a real setting, not "off": zlib stores the data
 		// uncompressed but still frames it, giving a per-chunk adler32
 		// for about 16 bytes a chunk. H5Pset_deflate rejects a negative

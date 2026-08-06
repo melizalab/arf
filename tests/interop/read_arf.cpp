@@ -4,10 +4,9 @@
  * The other direction of the interop test. Exits 0 when the file matches
  * expectations, 1 with detail on stderr otherwise.
  *
- * Some of what it asserts is current *broken* behavior, marked CHARACTERIZATION
- * below: arf.py stores strings as variable-length, and this library can only
- * read fixed-length ones. Those checks assert the breakage on purpose, so that
- * fixing it turns this program red rather than leaving the gap unnoticed.
+ * Covers both storage forms deliberately: arf.py writes variable-length string
+ * attributes, and this library writes fixed-length ones, so reading its files
+ * exercises the path that used to be unreachable from C++.
  *
  *     read_arf <path>
  */
@@ -38,6 +37,8 @@ check(bool ok, char const * what)
 int
 main(int argc, char ** argv)
 {
+        arf::h5e::silence_auto_print();
+
         if (argc < 2) {
                 std::fprintf(stderr, "usage: %s <path>\n", argv[0]);
                 return 2;

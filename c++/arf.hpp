@@ -70,7 +70,10 @@ public:
 
         /** Open an existing entry object */
         entry(h5a::node const & parent, std::string const & name)
-                : h5g::group(parent, name) {
+                : h5g::group(parent, name), _uuid() {
+                // value-initialized, so an entry with no uuid attribute reports
+                // the nil uuid rather than whatever happened to be in memory.
+                // arf.py's get_uuid returns UUID(int=0) in the same situation.
                 if (has_attribute("uuid")) {
                         std::string s;
                         read_attribute("uuid",s);
@@ -111,8 +114,9 @@ public:
          * @param data  the data to store in the dataset
          * @param units the units of the data
          * @param datatype an integer code indicating the type of data
-         * @param replace if true, drop existing dataset; otherwise appends data
-         * @param compression integer code indicating compression ratio (zlib).
+         * @param replace if true, drop any existing dataset of that name;
+         *        if false, an existing name is an error
+         * @param compression deflate level; see h5g::group::create_dataset (zlib).
          * Default is 0 which provides some integrity protection, use -1 for no filtering.
          */
         template <typename StorageType, typename MemType>
@@ -151,8 +155,9 @@ public:
          * @param name  the name of the dataset
          * @param units the units of the data
          * @param datatype an integer code indicating the type of data
-         * @param replace if true, drop existing dataset; otherwise appends data
-         * @param compression integer code indicating compression ratio (zlib).
+         * @param replace if true, drop any existing dataset of that name;
+         *        if false, an existing name is an error
+         * @param compression deflate level; see h5g::group::create_dataset (zlib).
          * Default is 0 which provides some integrity protection, use -1 for no filtering.
          */
         template <typename StorageType>
@@ -220,12 +225,17 @@ public:
          */
         file(std::string const & name, std::string const & mode)
                 : h5f::file(name, mode) {
-                // set root-level attributes
-                // TODO check whether file exists and already has version information
-                if (mode=="w" || mode=="a") {
-                        write_attribute("arf_library_version", ARF_LIBRARY_VERSION);
-                        write_attribute("arf_library", "c++");
-                        write_attribute("arf_version", ARF_VERSION);
+                // Stamp identity onto a file that has none. Mode "a" used to
+                // rewrite these unconditionally, so appending a single entry to
+                // a file arf.py wrote relabelled it as a c++ file at this
+                // library's version, destroying its provenance.
+                if (mode == "w" || mode == "a") {
+                        if (!has_attribute("arf_version") &&
+                            !has_attribute("arf_library_version")) {
+                                write_attribute("arf_version", ARF_VERSION);
+                                write_attribute("arf_library", "c++");
+                                write_attribute("arf_library_version", ARF_LIBRARY_VERSION);
+                        }
                 }
         }
 

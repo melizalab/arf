@@ -43,7 +43,6 @@ public:
 		const char * name = path.c_str();
 		h5p::proplist fapl(H5P_FILE_ACCESS);
                 h5p::proplist fcpl(H5P_FILE_CREATE);
-                H5Eset_auto2(H5E_DEFAULT,0,0); // silence hdf5 error stack
 
 #ifdef H5_HAVE_PARALLEL
 		H5Pset_fapl_mpiposix(fapl.hid(), MPI_COMM_WORLD, false);

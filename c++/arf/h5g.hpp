@@ -67,9 +67,6 @@ public:
                 }
 	}
 
-	/** Link an existing node under this group. */
-	void create_link(h5a::node const & subgroup);
-
 	/**
 	 * Create a new dataset and add data to it.  Currently only 1D
 	 * data is supported.
@@ -142,10 +139,27 @@ public:
 	}
 
 
+	/**
+	 * Read a dataset into a vector, which is resized to fit.
+	 *
+	 * Reads every element from offset to the end, stepping by stride.
+	 *
+	 * @param offset the element to start at
+	 * @param stride the number of elements to step between reads
+	 */
 	template <typename Type>
 	void read_dataset(std::string const & name, std::vector<Type> & data,
                           hsize_t offset=0, hsize_t stride=1) {
-		h5d::dataset(_self, name).read(data, offset, stride);
+		// NB: the count has to be worked out here. Forwarding straight
+		// to dataset::read(vector, count, offset, stride) put offset in
+		// count and stride in offset, so the defaults asked for zero
+		// elements starting at index one, and nothing was ever read.
+		h5d::dataset dset(_self, name);
+		hsize_t available = dset.dataspace()->size();
+		hsize_t count = 0;
+		if (stride > 0 && offset < available)
+			count = (available - offset + stride - 1) / stride;
+		dset.read(data, count, offset, stride);
 	}
 
 	template <typename Type>

@@ -53,22 +53,50 @@ TEST_CASE("the declared spec version matches the specification") {
         CHECK(std::string(ARF_VERSION) == "2.1");
 }
 
-TEST_CASE("opening for append rewrites the version attributes") {
-        // CHARACTERIZATION: known bug, see backlog item 10 and the TODO at
-        // c++/arf.hpp:195. Mode "a" unconditionally stamps this library's
-        // identity onto the file, so appending one entry to a file written by
-        // arf.py silently relabels it as a c++ file at whatever version this
-        // library happens to be. Provenance is lost with no warning.
+TEST_CASE("opening for append preserves another writer's provenance") {
+        // Mode "a" used to stamp this library's identity on unconditionally,
+        // so appending one entry to a file arf.py wrote relabelled it as a c++
+        // file at whatever version this library happened to be.
         arftest::handle_guard guard;
         arftest::scratch_file scratch("arf_append");
         {
                 arf::h5f::file plain(scratch.path, "w");
                 plain.write_attribute("arf_library", "python");
                 plain.write_attribute("arf_library_version", "2.7.2");
+                plain.write_attribute("arf_version", "2.1");
+        }
+        arf::file f(scratch.path, "a");
+        CHECK(f.read_attribute<std::string>("arf_library") == "python");
+        CHECK(f.read_attribute<std::string>("arf_library_version") == "2.7.2");
+}
+
+TEST_CASE("opening for append labels a file that has no version yet") {
+        arftest::handle_guard guard;
+        arftest::scratch_file scratch("arf_append_bare");
+        {
+                // a plain hdf5 file with nothing of ours in it
+                arf::h5f::file plain(scratch.path, "w");
+                arf::h5g::group child(plain, "something", true);
         }
         arf::file f(scratch.path, "a");
         CHECK(f.read_attribute<std::string>("arf_library") == "c++");
-        CHECK(f.read_attribute<std::string>("arf_library_version") == ARF_LIBRARY_VERSION);
+        CHECK(f.read_attribute<std::string>("arf_version") == ARF_VERSION);
+        CHECK(f.contains("something"));
+}
+
+TEST_CASE("an entry with no uuid reports the nil uuid") {
+        // the member is a POD, so without an initializer it held whatever was
+        // on the stack -- reading it was undefined behavior
+        arftest::handle_guard guard;
+        arftest::scratch_file scratch("arf_no_uuid");
+        {
+                arf::h5f::file plain(scratch.path, "w");
+                arf::h5g::group bare(plain, "entry_000", true);
+        }
+        arf::h5f::file f(scratch.path, "r");
+        arf::entry e(f, "entry_000");
+        CHECK_FALSE(e.has_attribute("uuid"));
+        CHECK(e.uuid().is_nil());
 }
 
 TEST_CASE("an entry stores the timestamp the spec requires") {

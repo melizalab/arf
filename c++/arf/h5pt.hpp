@@ -68,7 +68,7 @@ public:
 	/** Appends data to the packet table */
         template <typename Type>
 	void write(std::vector<Type> const & data) {
-                write(reinterpret_cast<void const *>(&data[0]), data.size());
+                write(reinterpret_cast<void const *>(data.data()), data.size());
 	}
 
 protected:

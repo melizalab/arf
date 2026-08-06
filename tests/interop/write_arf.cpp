@@ -54,6 +54,8 @@ struct datatype_traits<interval> {
 int
 main(int argc, char ** argv)
 {
+        arf::h5e::silence_auto_print();
+
         if (argc < 2) {
                 std::fprintf(stderr, "usage: %s <path>\n", argv[0]);
                 return 2;

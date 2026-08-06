@@ -198,24 +198,50 @@ TEST_CASE("read_dataset fills a caller-supplied array") {
         }
 }
 
-TEST_CASE("the vector overload of read_dataset reads nothing") {
-        // CHARACTERIZATION: known bug, see backlog item A. This overload
-        // forwards (offset, stride) into dataset::read(vector, count, offset),
-        // so offset lands in count and stride lands in offset: the defaults
-        // ask for zero elements starting at index 1. It also never resizes, so
-        // calling it with an empty vector indexes &data[0] out of bounds.
-        // Pre-sized here to keep the case from aborting.
+TEST_CASE("the vector overload of read_dataset resizes and fills") {
+        // This used to forward (offset, stride) into
+        // dataset::read(vector, count, offset), so offset landed in count and
+        // stride in offset: the defaults asked for zero elements starting at
+        // index one, and nothing was read. It also never resized, so an empty
+        // vector was indexed out of bounds.
         arftest::handle_guard guard;
         arftest::scratch_file scratch("g_read_vector");
         file f(scratch.path, "w");
         group entry(f, "entry", true);
-        entry.create_dataset("pcm", arftest::ramp(64));
+        std::vector<double> written = arftest::ramp(64);
+        entry.create_dataset("pcm", written);
 
-        std::vector<double> read(64, -1.0);
-        entry.read_dataset("pcm", read);
-        CHECK(read[0] == -1.0);
-        CHECK(read[63] == -1.0);
-        CHECK(read.size() == 64);
+        SUBCASE("the whole dataset, into an empty vector") {
+                std::vector<double> read;
+                entry.read_dataset("pcm", read);
+                CHECK(read == written);
+        }
+        SUBCASE("from an offset") {
+                std::vector<double> read;
+                entry.read_dataset("pcm", read, 60);
+                REQUIRE(read.size() == 4);
+                CHECK(read[0] == written[60]);
+                CHECK(read[3] == written[63]);
+        }
+        SUBCASE("with a stride") {
+                std::vector<double> read;
+                entry.read_dataset("pcm", read, 0, 8);
+                REQUIRE(read.size() == 8);
+                CHECK(read[0] == written[0]);
+                CHECK(read[1] == written[8]);
+                CHECK(read[7] == written[56]);
+        }
+        SUBCASE("an offset past the end reads nothing") {
+                std::vector<double> read(4, -1.0);
+                entry.read_dataset("pcm", read, 999);
+                CHECK(read.empty());
+        }
+        SUBCASE("a caller's oversized vector is shrunk, not overrun") {
+                std::vector<double> read(4096, -1.0);
+                entry.read_dataset("pcm", read);
+                CHECK(read.size() == 64);
+                CHECK(read == written);
+        }
 }
 
 }
