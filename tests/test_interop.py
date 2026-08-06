@@ -259,6 +259,28 @@ def test_cxx_datasets_carry_a_deflate_frame(cxx_file):
             assert dset.compression_opts == 0
 
 
+def test_spec_version_agrees_across_all_three():
+    """A fourth thing written out in three places, with the same drift risk.
+
+    specification.md is normative; both libraries must declare the version they
+    implement, and the same supported range, or a file will claim to conform to
+    something it does not.
+    """
+    spec = (REPO_ROOT / "specification.md").read_text()
+    declared = re.search(r"^-\s+Version:\s+(\S+)", spec, re.M)
+    assert declared, "could not find the version in specification.md"
+    assert declared.group(1) == arf.spec_version
+
+    types_hpp = (REPO_ROOT / "c++" / "arf" / "types.hpp").read_text()
+    assert '#define ARF_VERSION "%s"' % arf.spec_version in types_hpp
+
+    low, high = arf.supported_spec_versions()
+    assert '#define ARF_MIN_SPEC_VERSION "%s"' % low in types_hpp
+    # the upper bound is derived on both sides, so agreeing on the minimum and
+    # the implemented version is enough to make the ranges identical
+    assert high == "%d.0" % (int(arf.spec_version.split(".")[0]) + 1)
+
+
 def test_datatype_codes_agree_across_all_three():
     """specification.md is normative; both libraries must match its table.
 

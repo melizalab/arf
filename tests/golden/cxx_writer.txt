@@ -1,7 +1,7 @@
 FILE
   attr arf_library = 'c++' (dtype=S3)
   attr arf_library_version = <redacted> (dtype=S5)
-  attr arf_version = '2.1' (dtype=S3)
+  attr arf_version = '2.2' (dtype=S3)
   children-in-creation-order=[entry_001, entry_000]
 GROUP /entry_001
   attr animal = 'bird_042' (dtype=S8)

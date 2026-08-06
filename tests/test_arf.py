@@ -427,3 +427,139 @@ def test_check_file_version_reports_bad_versions(tmp_file):
     tmp_file.attrs["arf_version"] = "not-a-version"
     with pytest.raises(UserWarning, match="Unparseable"):
         arf.check_file_version(tmp_file)
+
+
+def test_is_entry_excludes_the_root(tmp_file):
+    """h5py's File is a Group, so testing only for Group counted the file.
+
+    The specification is explicit that a file may hold top-level datasets
+    belonging to no entry, so the root is not one.
+    """
+    assert not arf.is_entry(tmp_file)
+    # the same group reached by path rather than as the File object
+    assert not arf.is_entry(tmp_file["/"])
+
+    entry = arf.create_entry(tmp_file, "entry", tstamp)
+    assert arf.is_entry(entry)
+
+    # datasets are not entries, at the root or inside one
+    dset = arf.create_dataset(entry, "pcm", randn(100), units="mV", sampling_rate=1000)
+    assert not arf.is_entry(dset)
+    top = arf.create_table(tmp_file, "log", dtype=[("message", "S32")])
+    assert not arf.is_entry(top)
+
+    # the spec permits an entry to contain another; both are entries
+    nested = arf.create_entry(entry, "nested", tstamp)
+    assert arf.is_entry(nested)
+
+
+def test_walking_a_file_finds_only_entries(tmp_file):
+    """The shape of the bug: every walk of a file included the file."""
+    arf.create_entry(tmp_file, "entry_000", tstamp)
+    arf.create_entry(tmp_file, "entry_001", tstamp)
+    arf.create_table(tmp_file, "log", dtype=[("message", "S32")])
+
+    entries = [name for name in tmp_file if arf.is_entry(tmp_file[name])]
+    assert entries == ["entry_000", "entry_001"]
+    assert not arf.is_entry(tmp_file)
+
+
+def test_library_version_no_longer_stands_in_for_the_spec_version(tmp_path):
+    """The two versions parted ways at 3.0.
+
+    Very old files recorded only arf_library_version, back when the libraries
+    tracked the spec's major version so one could substitute for the other.
+    A 3.x library version says nothing about which spec the file follows.
+    """
+    path = tmp_path / "legacy.arf"
+
+    # a genuinely old file, where the substitution still holds
+    with h5.File(path, "w") as fp:
+        fp.attrs["arf_library_version"] = "2.2.0"
+    with h5.File(path) as fp:
+        assert str(arf.check_file_version(fp)) == "2.2.0"
+
+    # a library version from after the split cannot stand in
+    with h5.File(path, "w") as fp:
+        fp.attrs["arf_library_version"] = "3.0.0"
+    with h5.File(path) as fp:
+        with pytest.raises(UserWarning, match="cannot stand in"):
+            arf.check_file_version(fp)
+
+    # and an explicit arf_version is always preferred over the fallback
+    with h5.File(path, "w") as fp:
+        fp.attrs["arf_version"] = "2.1"
+        fp.attrs["arf_library_version"] = "3.0.0"
+    with h5.File(path) as fp:
+        assert str(arf.check_file_version(fp)) == "2.1"
+
+
+def _file_declaring(path, version):
+    """A bare hdf5 file claiming a specification version."""
+    with h5.File(path, "w") as fp:
+        if version is not None:
+            fp.attrs["arf_version"] = version
+    return path
+
+
+@pytest.mark.parametrize("declared", ["2.0", "2.1", "2.2"])
+def test_every_version_in_range_is_accepted(tmp_path, declared):
+    path = _file_declaring(tmp_path / "v.arf", declared)
+    with h5.File(path) as fp:
+        assert str(arf.check_file_version(fp)) == declared
+
+
+def test_a_later_minor_revision_needs_no_release(tmp_path):
+    """The point of deriving the upper bound rather than fixing it.
+
+    2.9 does not exist, and by the spec's own rule a minor revision cannot
+    change or remove a required attribute, so this library reads it.
+    """
+    path = _file_declaring(tmp_path / "v.arf", "2.9")
+    with h5.File(path) as fp:
+        assert str(arf.check_file_version(fp)) == "2.9"
+
+
+def test_a_later_major_revision_is_refused(tmp_path):
+    path = _file_declaring(tmp_path / "v.arf", "3.0")
+    with h5.File(path) as fp:
+        with pytest.raises(FutureWarning, match="postdates"):
+            arf.check_file_version(fp)
+
+
+def test_files_predating_the_minimum_point_at_the_upgrade_path(tmp_path):
+    """Pre-2.0 support was dropped; the message has to say what to do."""
+    path = _file_declaring(tmp_path / "v.arf", "1.1")
+    with h5.File(path) as fp:
+        with pytest.raises(DeprecationWarning, match="arfx"):
+            arf.check_file_version(fp)
+
+
+def test_supported_range_is_derived_from_the_implemented_version():
+    from packaging.version import Version
+
+    low, high = arf.supported_spec_versions()
+    assert Version(low) <= Version(arf.spec_version) < Version(high)
+    # the next major after what is implemented, not a literal
+    assert Version(high).major == Version(arf.spec_version).major + 1
+    assert Version(high).minor == 0
+    assert arf.spec_version in arf.version_info()
+
+
+def test_unknown_attributes_are_ignored(tmp_file):
+    """What minor-version tolerance actually rests on.
+
+    A later minor revision may add optional attributes. Reading a file that
+    carries them must not fail, or the tolerance above is worthless.
+    """
+    entry = arf.create_entry(tmp_file, "entry", tstamp)
+    entry.attrs["something_from_the_future"] = "hello"
+    dset = arf.create_dataset(
+        entry, "pcm", randn(100), units="mV", sampling_rate=1000
+    )
+    dset.attrs["also_unknown"] = 42
+
+    assert arf.is_entry(entry)
+    assert arf.is_time_series(dset)
+    assert str(arf.check_file_version(tmp_file)) == arf.spec_version
+    assert list(arf.keys_by_creation(tmp_file)) == ["entry"]

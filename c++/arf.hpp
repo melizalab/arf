@@ -14,6 +14,7 @@
 
 #include "arf/types.hpp"
 #include "arf/uuid.hpp"
+#include "arf/version.hpp"
 #include "arf/h5e.hpp"
 #include "arf/h5f.hpp"
 #include "arf/h5a.hpp"

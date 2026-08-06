@@ -15,7 +15,18 @@
 #include <cstdint>
 #include <hdf5.h>
 
-#define ARF_VERSION "2.1"
+/** the specification version this library writes */
+#define ARF_VERSION "2.2"
+/**
+ * The oldest specification this library will vouch for. Files older than this
+ * predate the 2.0 rewrite, which changed which attributes are required; the
+ * arfx package ships a script that upgrades them.
+ */
+#define ARF_MIN_SPEC_VERSION "2.0"
+/**
+ * The library's own release version. It versions independently of the
+ * specification and implies nothing about which version of it is implemented.
+ */
 #define ARF_LIBRARY_VERSION "3.0.0"
 
 namespace arf {

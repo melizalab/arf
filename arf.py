@@ -25,16 +25,43 @@ Timestamp = Union[datetime, struct_time, int, float, Tuple[int, int]]
 ArfTimeStamp = np.ndarray
 Datashape = Tuple[int, ...]
 
-spec_version = "2.1"
-__version__ = "2.7.3"
+spec_version = "2.2"
+__version__ = "3.0.0"
 version = __version__
+
+# The oldest specification this library will vouch for. Files older than this
+# predate the 2.0 rewrite, which changed which attributes are required; arfx
+# ships a script that upgrades them.
+min_spec_version = "2.0"
+
+
+def supported_spec_versions() -> Tuple[str, str]:
+    """The range of specification versions this library reads, [min, max).
+
+    The upper bound is the next major version after the one implemented, not a
+    fixed number: a minor revision of the specification cannot change or remove
+    a required attribute, so files written to any later 2.x are readable
+    without a new release. A 3.0 file is not, and never will be from this
+    release -- reading it needs a library built after that specification
+    exists. The library's own version number says nothing about any of this.
+
+    """
+    from packaging.version import Version
+
+    implemented = Version(spec_version)
+    return (min_spec_version, f"{implemented.major + 1}.0")
 
 
 def version_info():
     from h5py.version import hdf5_version
     from h5py.version import version as h5py_version
 
-    return f"Library versions:\n arf: {__version__}\n h5py: {h5py_version}\n HDF5: {hdf5_version}"
+    low, high = supported_spec_versions()
+    return (
+        f"Library versions:\n arf: {__version__}\n h5py: {h5py_version}\n"
+        f" HDF5: {hdf5_version}\n"
+        f" ARF specification: writes {spec_version}, reads >={low},<{high}"
+    )
 
 
 class DataTypes(IntEnum):
@@ -296,15 +323,20 @@ def check_file_version(file: h5.File):
     """
     from packaging.version import InvalidVersion, Version
 
-    try:
-        ver = file.attrs.get("arf_version", None)
-        if ver is None:
+    ver = file.attrs.get("arf_version", None)
+    # Very old files recorded only the library version, back when the libraries
+    # tracked the specification's major version and the two could stand in for
+    # each other. From 3.0 on they version independently, so a library version
+    # that high says nothing about which specification the file follows.
+    from_library = ver is None
+    if from_library:
+        try:
             ver = file.attrs["arf_library_version"]
-    except KeyError as err:
-        raise UserWarning(
-            f"Unable to determine ARF version for {file.filename};"
-            "created by another program?"
-        ) from err
+        except KeyError as err:
+            raise UserWarning(
+                f"Unable to determine ARF version for {file.filename};"
+                "created by another program?"
+            ) from err
     try:
         # if the attribute is stored as a string, it's ascii-encoded
         ver = ver.decode("ascii")
@@ -320,15 +352,25 @@ def check_file_version(file: h5.File):
             f"Unparseable ARF version {ver!r} for {file.filename};"
             "created by another program?"
         ) from err
-    if file_version < Version("1.1"):
-        raise DeprecationWarning(
-            f"ARF library {version} may have trouble reading file "
-            f"version {file_version} (< 1.1)"
+    low, high = supported_spec_versions()
+    if from_library and file_version >= Version(high):
+        raise UserWarning(
+            f"{file.filename} has no arf_version, and its arf_library_version "
+            f"({file_version}) cannot stand in for one: the libraries have "
+            "versioned independently of the specification since 3.0"
         )
-    elif file_version >= Version("3.0"):
+    if file_version < Version(low):
+        raise DeprecationWarning(
+            f"{file.filename} claims ARF specification {file_version}, which "
+            f"predates {low}; the required attributes changed at 2.0. "
+            "The arfx package ships a script that upgrades old files."
+        )
+    elif file_version >= Version(high):
         raise FutureWarning(
-            f"ARF library {version} may be incompatible with file "
-            f"version {file_version} (>= 3.0)"
+            f"{file.filename} claims ARF specification {file_version}, which "
+            f"postdates this library's {spec_version}. A major revision may "
+            "change required attributes, so its contents cannot be trusted "
+            "here; upgrade arf to a release that implements it."
         )
     return file_version
 
@@ -520,8 +562,15 @@ def is_marked_pointproc(dset: h5.Dataset) -> bool:
 
 
 def is_entry(obj: h5.HLObject) -> bool:
-    """Return True if the object is an entry (i.e. an hdf5 group)"""
-    return isinstance(obj, h5.Group)
+    """Return True if the object is an entry.
+
+    An entry is an HDF5 group other than the root. The root is excluded
+    deliberately: the specification allows a file to hold top-level datasets
+    that belong to no entry, and h5py's File *is* a Group, so testing only for
+    Group counted the file itself as one of its own entries.
+
+    """
+    return isinstance(obj, h5.Group) and obj.name != "/"
 
 
 def count_channels(dset: h5.Dataset) -> int:

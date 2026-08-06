@@ -48,9 +48,9 @@ TEST_CASE("a new file identifies itself as arf") {
 }
 
 TEST_CASE("the declared spec version matches the specification") {
-        // specification.md says 2.1; bump both together or the file lies about
-        // what it conforms to
-        CHECK(std::string(ARF_VERSION) == "2.1");
+        // bump this, specification.md, and arf.py's spec_version together, or
+        // the file lies about what it conforms to
+        CHECK(std::string(ARF_VERSION) == "2.2");
 }
 
 TEST_CASE("opening for append preserves another writer's provenance") {

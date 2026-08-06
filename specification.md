@@ -13,13 +13,13 @@ wide range of operating systems and architectures.
 
 -   Name: <https://meliza.org/spec:1/arf> (1/arf)
 -   Editor: Dan Meliza (dan at meliza.org)
--   Version: 2.1
+-   Version: 2.2
 -   State:  released
--   MIME type: `application/vnd.meliza-org.arf; version=2.1`
+-   MIME type: `application/vnd.meliza-org.arf; version=2.2`
 
 ## Licence
 
-Copyright (c) 2010-2018 C Daniel Meliza.
+Copyright (c) 2010-2026 C Daniel Meliza.
 
 This Specification is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the Free
@@ -38,13 +38,21 @@ this program; if not, see <http://www.gnu.org/licenses>.
 
 This Specification is a free and open Consensus-Oriented Specification System ([COSS](https://rfc.unprotocols.org/spec:2/COSS/)).
 
-Version numbering from 2.0 on must be [semantic](http://semver.org). Changes that
+Version numbering from 2.0 on MUST be [semantic](http://semver.org). Changes that
 maintain backwards compatibility (i.e., that do not change or remove any
 required fields and attributes) result in increments to the minor version.
-Changes that break backwards compatibility must receive new major version
-numbers. Changes that significantly alter the goals of the specification must
+Changes that break backwards compatibility MUST receive new major version
+numbers. Changes that significantly alter the goals of the specification MUST
 result in a new identifier, preferably with a reference to the version of this
 document at the time of the fork.
+
+Implementations version independently of this Specification, and a library's
+version number implies nothing about which version of this document it
+implements. Because a minor revision cannot change or remove a required
+attribute, an implementation written for one minor version can read files
+written to any later minor version of the same major version; a new major
+version requires a new release. Implementations SHOULD report the range of
+Specification versions they support.
 
 ## Language
 
@@ -103,7 +111,7 @@ specialized for one or a few applications.
 
 ## Implementation
 
-ARF files shall be in the HDF5 format, version 1.8 or later. HDF5 is critical to
+ARF files SHALL be in the HDF5 format, version 1.8 or later. HDF5 is critical to
 providing flexibility and portability. It is available on multiple platforms and
 supports automatic conversion of data types, allowing transparent access of data
 across many architectures. HDF5 files support hierarchical organization of
@@ -114,25 +122,33 @@ application.
 ### Entries
 
 An *entry* is defined as an abstract grouping of zero or more *datasets* that
-all share a common start time. Each *entry* shall be represented by an HDF5
-group. The group shall contain all the data objects associated with that entry,
+all share a common start time. Each *entry* SHALL be represented by an HDF5
+group. The group SHALL contain all the data objects associated with that entry,
 stored as HDF5 datasets, and all the metadata associated with the entry, stored
 as HDF5 attributes. The following attributes are required:
 
--   **timestamp:** The start time of the entry. This attribute shall consist of a
+-   **timestamp:** The start time of the entry. This attribute SHALL consist of a
     two-element array with the first element indicating the number of
     seconds since January 1, 1970 UTC, and the second element
-    indicating the rest of the elapsed time, in microseconds. Must
+    indicating the rest of the elapsed time, in microseconds. MUST
     have at least 64-bit integer precision.
--   **uuid:** A universally unique ID for the entry (see [RFC 4122](http://tools.ietf.org/html/rfc4122.html)). Must be stored
-    as a 128-bit integer or a 36-byte `H5T_STRING` with `CTYPE` of
-    `H5T_C_S1`. The latter is preferred as 128-bit integers are not
-    supported on many platforms.
+-   **uuid:** A universally unique ID for the entry (see [RFC 4122](http://tools.ietf.org/html/rfc4122.html)). MUST be stored
+    as a 128-bit integer or as its 36-character canonical text form in an
+    `H5T_STRING` with `CTYPE` of `H5T_C_S1`. The latter is preferred as
+    128-bit integers are not supported on many platforms.
 
 In addition, the following optional attributes are defined. They do not need to
-be present in the group if not applicable, but if they are present they must
+be present in the group if not applicable, but if they are present they MUST
 have a datatype with class `H5T_STRING` and `CTYPE` of `H5T_C_S1`. Encoding
-must be ASCII or UTF-8 and match the value of `CSET`.
+MUST be ASCII or UTF-8 and match the value of `CSET`. Declaring UTF-8 is always
+safe, as ASCII is a subset of it.
+
+String attributes MAY be stored either fixed-length or variable-length, and
+this Specification does not prefer one. Implementations MUST be able to read
+both, including fixed-length strings that fill their datatype with no room for
+a terminator. Writers MAY choose whichever suits them: fixed-length keeps the
+characters inline in the object header, while variable-length gives one
+datatype regardless of the value.
 
 -   **animal:** Indicates the name or ID of the animal.
 -   **experimenter:** Indicates the name or ID of the experimenter.
@@ -143,66 +159,72 @@ must be ASCII or UTF-8 and match the value of `CSET`.
 ### Datasets
 
 A *dataset* is defined as a concrete time series or point process.  Multiple
-datasets may be stored in an entry, and may be unequal in length or have
+datasets MAY be stored in an entry, and MAY be unequal in length or have
 different *timebases*.
 
 A *timebase* is defined by two quantities (with units), one of which is optional
 under some circumstances. The required quantity is the *offset* of the data.
 All time values in a dataset are relative to this time.  The default offset of
-a dataset is the timestamp of the entry.  Individual datasets may have their
+a dataset is the timestamp of the entry.  Individual datasets MAY have their
 own offsets, which are calculated relative to the entry timestamp.
 
 The second quantity in a timebase is the *sampling rate*, which allows discrete
 times to be converted to real times. It is required if the data are sampled (as
 in a time series) or if time values in a point process are in units of samples.
-Only point proceses with real-valued units of time may omit the sampling rate.
+Only point proceses with real-valued units of time MAY omit the sampling rate.
 
-Real-valued times must be in units of seconds ('s'). Discrete-valued times must be in
+Real-valued times MUST be in units of seconds ('s'). Discrete-valued times MUST be in
 units of 'samples'.
 
-Each channel of data in an entry shall be represented by a separate HDF5
+The `units` attribute alone determines which timebase a dataset uses. A point
+process with real-valued times MAY carry a `sampling_rate` -- to record the rate
+of the signal the events were derived from, for example -- and its times remain
+in seconds. Readers MUST NOT infer a discrete timebase from the presence of
+`sampling_rate`.
+
+Each channel of data in an entry SHALL be represented by a separate HDF5
 dataset. The format of each dataset depends on the type of data it stores.
 
 #### Sampled data
 
-Sampled data shall be stored as an N-dimensional array of scalar values
+Sampled data SHALL be stored as an N-dimensional array of scalar values
 corresponding to the measurement at each sampling interval. The first dimension
-of the array must correspond to time. The significance of additional dimensions
+of the array MUST correspond to time. The significance of additional dimensions
 is unspecified. The `sampling_rate` attribute is required.
 
 #### Event data
 
-Event data may be stored in one of two formats. Simple event data should be
+Event data MAY be stored in one of two formats. Simple event data SHOULD be
 stored in a 1D array, with each element in the array indicating the time of the
 event **relative to the start of the dataset**. Event datasets can be
-distinguished from 1D sampled datasets because the `units` attribute must be
+distinguished from 1D sampled datasets because the `units` attribute MUST be
 "samples" or "s".
 
-Complex event data must be stored as arrays with a compound datatype (i.e., with
+Complex event data MUST be stored as arrays with a compound datatype (i.e., with
 multiple fields). Only one field is required, `start`, which indicates the time
 of the event and can be any numerical type.
 
-Spike waveforms and features extracted from raw data should be stored in complex
+Spike waveforms and features extracted from raw data SHOULD be stored in complex
 event datasets, with the `start` field indicating the time of the spike and
 additional array or scalar fields storing the waveforms and features.
 
 A special case of event data are intervals, which are defined by a start and
 stop time. In previous versions of the specification, intervals were considered
 a separate data type, with two additional required fields, `name` (a string) and
-`stop` (a time). This format is permitted in version 2.0, but intervals may also
+`stop` (a time). This format is permitted in version 2.0, but intervals MAY also
 be stored as separate start and stop events.
 
 #### Dataset attributes
 
-All datasets must have the following attributes.
+All datasets MUST have the following attributes.
 
-- **units:** A string giving the units of the channel data, which should be in
-  SI notation. May be an empty string for sampled data if units are not known.
-  Event data must have units of "samples" (for a discrete timebase) or "s" (for
-  a continuous timebase); sampled data must not use these units. For complex
-  event data, this attribute must be an array, with each element of the array
+- **units:** A string giving the units of the channel data, which SHOULD be in
+  SI notation. MAY be an empty string for sampled data if units are not known.
+  Event data MUST have units of "samples" (for a discrete timebase) or "s" (for
+  a continuous timebase); sampled data MUST not use these units. For complex
+  event data, this attribute MUST be an array, with each element of the array
   indicating the units of the associated field in the data.
-- **datatype:** Indicates the source of data in the entry. Must have at least
+- **datatype:** Indicates the source of data in the entry. MUST have at least
   unsigned integer precision great enough to include all the values defined in
   5.2.4.
 
@@ -210,27 +232,27 @@ The following attribute is only required for datasets with a discrete timebase:
 
 - **sampling\_rate:** A nonzero number indicating the sampling rate of the data,
   in samples per second (Hz). Required for all datasets with a sampled timebase.
-  May be any numerical datatype.
+  MAY be any numerical datatype.
 
 The following attributes are optional:
 
 - **offset:** Indicates the start time of the dataset relative to the start of
   the entry, defined by the timebase of the dataset. For discrete timebases, the
-  units must be in samples; for continuous timebases, the units must be the same
-  as the units of the dataset. If this attribute is missing, the offset shall be
+  units MUST be in samples; for continuous timebases, the units MUST be the same
+  as the units of the dataset. If this attribute is missing, the offset SHALL be
   assumed to be zero.
 - **uuid:** A universally unique ID for the dataset (see
   [RFC 4122](http://tools.ietf.org/html/rfc4122.html)). Multiple datasets in
-  different entries of the same file may have the same uuid, indicating that
-  they were obtained from the same source and experimental conditions. Must be
-  stored as a 128-bit integer or a 36-byte `H5T_STRING` with `CTYPE` of
-  `H5T_C_S1`. The latter is preferred as 128-bit integers are not supported on
-  many platforms.
+  different entries of the same file MAY have the same uuid, indicating that
+  they were obtained from the same source and experimental conditions. MUST be
+  stored as a 128-bit integer or as its 36-character canonical text form in an
+  `H5T_STRING` with `CTYPE` of `H5T_C_S1`. The latter is preferred as 128-bit
+  integers are not supported on many platforms.
 
 ####  Datatypes
 
 The `datatype` attribute is an integer code indicating the type of data in a
-channel. This field is purely advisory: it specifies how the data should be
+channel. This field is purely advisory: it specifies how the data SHOULD be
 interpreted but does not imply any contract as to the dataspace or storage type
 of the dataset. The following values are defined:
 
@@ -256,27 +278,43 @@ Values below 1000 are reserved for sampled data types.
 
 #### Top-level datasets
 
-ARF files may have datasets in the root group. These must not associated with
-any entry, but may be used to store structured data or metadata for the entire
-file. For example, data recording software may keep a log of events. There are
+ARF files MAY have datasets in the root group. These MUST NOT associated with
+any entry, but MAY be used to store structured data or metadata for the entire
+file. For example, data recording software MAY keep a log of events. There are
 no requirements for the datatype, dataspace, or attributes of these datasets.
 
 #### Multiple linkages
 
-Datasets must not be linked to more than one entry, as this would make the time
-of the data undefined. Entries must not be multiply linked to the root HDF5
-group. Entries may contain other entries, but their contents are not considered
+Datasets MUST NOT be linked to more than one entry, as this would make the time
+of the data undefined. Entries MUST NOT be multiply linked to the root HDF5
+group. Entries MAY contain other entries, but their contents are not considered
 part of the ARF data hierarchy.
 
 ### Extensions to the format
 
 The above specification is a required minimum for a file to be in ARF format.
-Additional attributes, groups, and datasets may be added, but must not conflict
+Additional attributes, groups, and datasets MAY be added, but MUST NOT conflict
 with any attributes specified above. Because optional attributes may be forwards
-incompatible with later versions due to namespace collision, their names should
+incompatible with later versions due to namespace collision, their names SHOULD
 be prefixed with the name of the application (e.g. 'jill\_sample\_count').
 
 ## Changes from previous versions
+
+### version 2.2
+
+Clarifications only.
+
+The `uuid` attribute is specified by its 36-character text form rather than a
+byte count, which had been read as a constraint on the buffer rather than on
+the value.
+
+String attributes were stated to be storable either fixed- or variable-length,
+with readers required to accept both. This had been left open, and independent
+implementations chose differently, which made their files mutually unreadable.
+
+The `units` attribute was stated to be the sole determinant of a dataset's
+timebase, and readers were forbidden from inferring a discrete timebase from
+the presence of `sampling_rate`.
 
 ### version 2.1
 
@@ -295,7 +333,7 @@ data became a special case of complex event data. This was to allow data
 collection programs to store more information about events, without forcing them
 to use the strictly defined data type for intervals. The definition of a
 distinct interval data type was dropped unceremoniously. Software reading the
-INTERVAL, STIMI, and COMPONENTL should check for the existence of a 'stop'
+INTERVAL, STIMI, and COMPONENTL SHOULD check for the existence of a 'stop'
 field.
 
 The times for event data were no longer required to be in units of seconds, and
@@ -316,7 +354,7 @@ Catalogs were removed at the top level and in entries. The objects themselves
 now carry all the metadata once in the catalog as attributes.
 
 Multichannel datasets were deprecated in favor of multiple single-channel
-datasets. Channels should only be grouped into single datasets when the data are
+datasets. Channels SHOULD only be grouped into single datasets when the data are
 really inseparable (e.g. left and right channels). This greatly improved read
 performance, at some expense in file size.
 
