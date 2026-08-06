@@ -120,18 +120,18 @@ TEST_CASE("an entry gets a uuid that survives reopening") {
         CHECK(boost::uuids::to_string(reopened.uuid()).size() == 36);
 }
 
-TEST_CASE("the uuid attribute is one byte wider than the spec allows") {
-        // CHARACTERIZATION: the spec calls for "a 36-byte H5T_STRING", and
-        // arf.py writes exactly that with dtype |S36. node::write_attribute
-        // sizes string attributes at value.size()+1 to leave room for a
-        // terminator, so C++ writes 37. Readers that assume 36 see a trailing
-        // NUL; h5py reports a different dtype for the same logical value.
+TEST_CASE("the uuid attribute is exactly 36 bytes, as the spec requires") {
+        // "a 36-byte H5T_STRING", which is also what arf.py writes as |S36.
+        // node::write_attribute sizes strings at value.size()+1 for a
+        // terminator, so the uuid goes through the fixed-width path instead.
+        // Every other string attribute is variable-length.
         arftest::handle_guard guard;
         arftest::scratch_file scratch("arf_uuid_width");
         arf::file f(scratch.path, "w");
         arf::entry e(f, "entry_000", 1, 0);
 
-        CHECK(attribute_width(e, "uuid") == 37);
+        CHECK(attribute_width(e, "uuid") == 36);
+        CHECK(e.read_attribute<std::string>("uuid").size() == 36);
 }
 
 TEST_CASE("datasets created through an entry carry units and datatype") {
@@ -217,15 +217,12 @@ TEST_CASE("the datatype codes match the specification") {
         CHECK(arf::COMPONENTL == 2002);
 }
 
-TEST_CASE("INTRAC_VC does not match the specification") {
-        // CHARACTERIZATION: known bug, see backlog item 1. specification.md
-        // and arf.py both give voltage-clamp the code 6; this library has said
-        // 7 since it was written, so every voltage-clamp dataset it has ever
-        // produced is mislabeled, and 6 reads back as an unknown code. Fixing
-        // it changes file output, so it needs a library version bump rather
-        // than a quiet edit.
-        CHECK(arf::INTRAC_VC == 7);
-        CHECK(arf::INTRAC_VC != 6);
+TEST_CASE("INTRAC_VC matches the specification") {
+        // specification.md and arf.py both give voltage clamp the code 6; this
+        // library said 7 from the day it was written, so anything it labelled
+        // as voltage clamp was mislabelled. Nothing was ever recorded with it,
+        // so there are no files in the wild to migrate.
+        CHECK(arf::INTRAC_VC == 6);
 }
 
 }

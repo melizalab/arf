@@ -13,6 +13,8 @@
 #define _H5A_H 1
 
 #include <boost/scoped_array.hpp>
+#include <algorithm>
+#include <cstring>
 #include <vector>
 #include "hdf5.hpp"
 #include "h5t.hpp"
@@ -73,11 +75,34 @@ public:
                 write(&value[0], value.size());
 	}
 
+	/**
+	 * Write a string. This library creates fixed-length attributes sized to
+	 * their value, but an attribute written by another implementation may
+	 * be variable-length, so both are handled.
+	 */
 	void write(std::string const & value) {
 		// the wrapper owns the handle, so it is released even if the
 		// write throws
 		h5t::datatype type(h5e::check_error(H5Aget_type(_self)));
-		h5e::check_error(H5Awrite(_self, type.hid(), value.c_str()));
+		if (H5Tis_variable_str(type.hid()) > 0) {
+			// hdf5 wants the address of the pointer, not the
+			// characters
+			char const * p = value.c_str();
+			h5e::check_error(H5Awrite(_self, type.hid(), &p));
+			return;
+		}
+		// A fixed-length write consumes exactly the datatype's width.
+		// The common case is an attribute this library just sized to
+		// fit, where the value can go straight across; only a wider
+		// attribute needs a padded copy.
+		std::size_t width = type.size();
+		if (width <= value.size()) {
+			h5e::check_error(H5Awrite(_self, type.hid(), value.data()));
+			return;
+		}
+		std::vector<char> buf(width, '\0');
+		std::memcpy(&buf[0], value.data(), value.size());
+		h5e::check_error(H5Awrite(_self, type.hid(), &buf[0]));
 	}
 
 
@@ -201,16 +226,51 @@ public:
 		attr.write<MemType>(arr, size);
 	}
 
-	// strings have to be handled differently because we need to
-	// set the size of the datatype when the attribute is created.
+	/**
+	 * Write a string attribute, sized to exactly the characters it holds.
+	 *
+	 * Strings are handled separately because the datatype's width is a
+	 * property of the value, so the attribute has to be recreated whenever
+	 * the length changes. Sizing to `value.size()` rather than
+	 * `value.size() + 1` is what makes a uuid come out as the 36-byte
+	 * string the specification asks for, and matches both arf.py's |S36 and
+	 * the MATLAB helpers. An empty value still needs a byte to live in.
+	 */
 	void write_attribute(std::string const & name, std::string const & value) {
 		delete_attribute(name);
 		h5t::wrapper<std::string> t;
 		h5t::datatype type(t);
-		type.set_size(value.size()+1);
+		type.set_size(value.empty() ? 1 : value.size());
 		h5s::dataspace dspace;
 		attribute attr(_self, name, dspace, type);
 		attr.write(value);
+	}
+
+	/**
+	 * Write an array of strings, all one width. The specification requires
+	 * this shape for the units of complex event data, one element per
+	 * compound field.
+	 */
+	void write_attribute(std::string const & name,
+			     std::vector<std::string> const & values) {
+		delete_attribute(name);
+		std::size_t width = 1;
+		for (std::size_t i = 0; i < values.size(); ++i)
+			width = std::max(width, values[i].size());
+
+		h5t::wrapper<std::string> t;
+		h5t::datatype type(t);
+		type.set_size(width);
+		std::vector<hsize_t> dims(1, values.size());
+		h5s::dataspace dspace(dims);
+		attribute attr(_self, name, dspace, type);
+		if (values.empty()) return;
+
+		// one packed buffer, NUL-padded to the common width
+		std::vector<char> buf(values.size() * width, '\0');
+		for (std::size_t i = 0; i < values.size(); ++i)
+			std::memcpy(&buf[i * width], values[i].data(), values[i].size());
+		h5e::check_error(H5Awrite(attr.hid(), type.hid(), &buf[0]));
 	}
 
 	template <typename Type>

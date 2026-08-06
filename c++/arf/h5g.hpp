@@ -76,7 +76,10 @@ public:
 	 *
 	 * @param name  the name of the dataset
 	 * @param data  the data to store in the dataset
-	 * @param compression integer code indicating compression ratio
+	 * @param compression deflate level. 0, the default, stores the data
+	 *        uncompressed but still frames it through zlib, which costs
+	 *        about 16 bytes a chunk and gives every chunk an adler32.
+	 *        1 through 9 compress; a negative value writes no filter.
 	 */
 	template <typename StorageType, typename MemType>
 	h5d::dataset::ptr_type
@@ -130,8 +133,11 @@ public:
 			unlink(name);
 		}
 
+                // H5PTcreate_fl uses the same convention as create_dataset:
+                // -1 for no filter, 0 through 9 for a deflate level
                 h5pt::packet_table::ptr_type pt =
-                        boost::make_shared<h5pt::packet_table>(_self, name, type, chunk_size, compression);
+                        boost::make_shared<h5pt::packet_table>(_self, name, type, chunk_size,
+                                                               compression);
 		return pt;
 	}
 

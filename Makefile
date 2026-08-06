@@ -166,4 +166,8 @@ install:
 	install -m 644 -o root c++/*.hpp $(PREFIX)/include/
 	install -m 644 -o root c++/arf/*.hpp $(PREFIX)/include/arf/
 
+# both sets: without the interop dep files, those binaries would not rebuild
+# when a header changes, and `make golden-update` would regenerate the golden
+# from a stale writer
 -include $(TEST_OBJS:.o=.d)
+-include $(INTEROP_BINS:=.d)

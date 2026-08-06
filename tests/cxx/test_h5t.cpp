@@ -60,14 +60,27 @@ TEST_CASE("char is a one-byte integer, not a string") {
         CHECK(H5Tget_class(t.hid()) == H5T_INTEGER);
 }
 
-TEST_CASE("strings start out one byte wide and are resized on use") {
+TEST_CASE("strings are fixed-length and declared UTF-8") {
+        // The spec constrains the class and CTYPE, and requires the declared
+        // CSET to match the encoding -- which ASCII did not, once a
+        // std::string held UTF-8. It leaves fixed versus variable length open
+        // except for uuid. Fixed-length keeps the characters inline in the
+        // object header, with no global-heap indirection and no allocation on
+        // read, which is what the acquisition path wants.
         datatype t = make<std::string>();
         CHECK(H5Tget_class(t.hid()) == H5T_STRING);
-        // H5T_C_S1 is a single character until somebody calls set_size, which
-        // is why node::write_attribute has to special-case strings
-        CHECK(t.size() == 1);
-        t.set_size(37);
-        CHECK(t.size() == 37);
+        CHECK(H5Tis_variable_str(t.hid()) == 0);
+        CHECK(H5Tget_cset(t.hid()) == H5T_CSET_UTF8);
+        CHECK(H5Tget_strpad(t.hid()) == H5T_STR_NULLPAD);
+
+        datatype c = make<char const *>();
+        CHECK(H5Tis_variable_str(c.hid()) == 0);
+        CHECK(H5Tget_cset(c.hid()) == H5T_CSET_UTF8);
+
+        // the width belongs to the value, and is set when the attribute is
+        // created -- see node::write_attribute
+        t.set_size(36);
+        CHECK(t.size() == 36);
 }
 
 TEST_CASE("uuids are stored as 16 raw bytes") {
@@ -78,13 +91,16 @@ TEST_CASE("uuids are stored as 16 raw bytes") {
 }
 
 TEST_CASE("copies own independent handles") {
-        datatype original = make<std::string>();
+        // a fixed-length string, since resizing is what makes the
+        // independence observable
+        datatype original(H5Tcopy(H5T_C_S1));
+        original.set_size(8);
         datatype copy(original);
         REQUIRE(copy.hid() != original.hid());
 
         copy.set_size(64);
         CHECK(copy.size() == 64);
-        CHECK(original.size() == 1);
+        CHECK(original.size() == 8);
 }
 
 TEST_CASE("assignment releases the old handle and takes a fresh copy") {

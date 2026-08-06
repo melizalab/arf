@@ -71,7 +71,7 @@ public:
 
 	template <typename Type>
 	void write(std::vector<Type> const & data) {
-                write(&data[0], data.size());
+                write(data.empty() ? 0 : &data[0], data.size());
         }
 
         /**
@@ -163,6 +163,10 @@ private:
 		h5p::proplist dcpl(H5P_DATASET_CREATE);
 		h5e::check_error(H5Pset_layout(dcpl.hid(), H5D_CHUNKED));
 		h5e::check_error(H5Pset_chunk(dcpl.hid(), dspace.ndims(), &chunkdims[0]));
+		// 0 is a real setting, not "off": zlib stores the data
+		// uncompressed but still frames it, giving a per-chunk adler32
+		// for about 16 bytes a chunk. H5Pset_deflate rejects a negative
+		// level, which is what makes it the sentinel for no filter.
 		if (compress > -1)
 			h5e::check_error(H5Pset_deflate(dcpl.hid(), compress));
 

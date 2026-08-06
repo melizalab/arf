@@ -131,12 +131,12 @@ TEST_CASE("guess_chunk refuses a scalar") {
                         arf::Exception);
 }
 
-TEST_CASE("guess_chunk returns a zero chunk for an empty dataset") {
-        // CHARACTERIZATION: a zero-length extent has zero size, which is
-        // already under the target, so the loop exits before adjusting
-        // anything and hands back a chunk of 0. H5Pset_chunk rejects that, so
-        // creating an empty dataset fails downstream rather than here.
-        CHECK(guess_chunk(dims(0), sizeof(float)) == dims(0));
+TEST_CASE("guess_chunk never returns a zero chunk") {
+        // A zero-length extent used to yield a chunk of 0, which H5Pset_chunk
+        // rejects, so an empty dataset could not be created at all -- though
+        // arf.py allows one. The extent is clamped before the loop measures it.
+        CHECK(guess_chunk(dims(0), sizeof(float)) == dims(1));
+        CHECK(guess_chunk(dims(0, 4), sizeof(float))[0] >= 1);
 }
 
 TEST_CASE("dataspaces leak no handles") {

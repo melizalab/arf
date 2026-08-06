@@ -175,18 +175,18 @@ def test_cxx_reads_python_file(py_file):
 
 
 @requires_cxx
-def test_cxx_bytes_units_classify_correctly(cxx_file):
-    """C++ discrete event data is recognized as event data.
+def test_cxx_discrete_event_data_classifies_correctly(cxx_file):
+    """A spike train on a discrete timebase is event data, not a time series.
 
-    The C++ library stores strings as fixed-length, so h5py hands their values
-    back as bytes, while arf.py's variable-length strings come back as str.
-    is_time_series tests `units not in ("s", "samples")`, which never matched
-    b"samples", so a spike train on a discrete timebase -- which the spec
-    requires to carry both units="samples" and a sampling_rate -- was read as
-    sampled data. The comparison now normalizes first.
+    It carries both units="samples" and a sampling_rate, as the spec requires,
+    which is the combination is_time_series used to misread. The C++ library
+    writes fixed-length strings, which h5py returns as bytes, and arf.py now
+    normalizes before comparing -- so a file from either library, or from any
+    other writer's choice of storage, classifies the same.
     """
     with h5py.File(cxx_file, "r") as fp:
         discrete = fp["entry_000"]["spike_samples"]
+        assert discrete.attrs["units"] == b"samples"
         assert isinstance(discrete.attrs["units"], bytes)
         assert discrete.attrs["sampling_rate"] == 20000
         assert not arf.is_time_series(discrete)
@@ -205,14 +205,11 @@ def test_python_units_are_str(py_file):
 
 
 @requires_cxx
-def test_cxx_uuid_is_one_byte_too_wide(cxx_file):
-    """CHARACTERIZATION: the spec asks for a 36-byte string; C++ writes 37."""
+def test_cxx_uuid_matches_the_spec(cxx_file):
+    """The spec asks for a 36-byte string, and both libraries now write one."""
     with h5py.File(cxx_file, "r") as fp:
-        dtype = fp["entry_000"].attrs.get_id("uuid").dtype
-        assert dtype == np.dtype("S37")
-    with h5py.File(cxx_file, "r") as fp:
-        py_written = arf.get_uuid(fp["entry_000"])
-        assert len(str(py_written)) == 36
+        assert fp["entry_000"].attrs.get_id("uuid").dtype == np.dtype("S36")
+        assert len(str(arf.get_uuid(fp["entry_000"]))) == 36
 
 
 def test_python_uuid_is_36_bytes(py_file):
@@ -221,20 +218,23 @@ def test_python_uuid_is_36_bytes(py_file):
 
 
 @requires_cxx
-def test_cxx_compound_units_are_scalar(cxx_file):
-    """CHARACTERIZATION: complex event data needs one unit per field.
+def test_cxx_compound_units_are_one_per_field(cxx_file):
+    """Complex event data carries one unit per compound field.
 
-    specification.md requires the units attribute of a compound dataset to be
-    an array with an element per field, and arf.create_dataset enforces it.
-    entry::create_packet_table takes a single std::string, so the C++ library
-    cannot express it and writes one scalar for the whole record.
+    specification.md requires it and arf.create_dataset enforces it;
+    entry::create_packet_table took a single std::string, so the C++ library
+    could not express it and wrote one scalar for the whole record.
     """
     with h5py.File(cxx_file, "r") as fp:
-        units = fp["entry_000"]["intervals"].attrs["units"]
-        assert units == b"ms"
-        assert np.asarray(units).shape == ()
+        intervals = fp["entry_000"]["intervals"]
+        units = intervals.attrs["units"]
+        assert np.asarray(units).shape == (3,)
+        # fixed-length, so h5py hands these back as bytes
+        assert list(units) == [b"", b"ms", b"ms"]
+        # one per field, in field order
+        assert len(units) == len(intervals.dtype.names)
 
-    # arf.py refuses to write what C++ just wrote
+    # and arf.py still rejects the scalar form the C++ library used to write
     with pytest.raises(ValueError, match="sequence of units"):
         with arf.open_file("/dev/null", "w", driver="core", backing_store=False) as fp:
             entry = arf.create_entry(fp, "e", 1)
@@ -243,25 +243,35 @@ def test_cxx_compound_units_are_scalar(cxx_file):
 
 
 @requires_cxx
-def test_cxx_always_applies_a_deflate_filter(cxx_file):
-    """CHARACTERIZATION: compress=0 still installs gzip; see backlog item J."""
+def test_cxx_datasets_carry_a_deflate_frame(cxx_file):
+    """Every C++-written dataset is filtered at deflate level 0, on purpose.
+
+    Level 0 stores the data uncompressed but still frames it through zlib,
+    giving each chunk an adler32 for about 16 bytes. That integrity check is
+    wanted for recorded data, so it is the default rather than opt-in; a
+    negative compression argument writes no filter.
+    """
     with h5py.File(cxx_file, "r") as fp:
-        for name in ("pcm", "spikes", "intervals"):
+        for name in ("pcm", "spikes", "spike_samples", "intervals"):
             dset = fp["entry_000"][name]
             assert dset.compression == "gzip"
             assert dset.compression_opts == 0
 
 
-def test_datatype_codes_diverge():
-    """CHARACTERIZATION: the two implementations disagree; see backlog item 1.
+def test_datatype_codes_agree_on_intrac_vc():
+    """The C++ enum said 7 where the spec and arf.py say 6."""
+    types_hpp = (REPO_ROOT / "c++" / "arf" / "types.hpp").read_text()
+    assert "INTRAC_VC = 6" in types_hpp
+    assert arf.DataTypes.INTRAC_VC == 6
+    assert arf.DataTypes.INTRAC_CC == 5
 
-    c++/arf/types.hpp gives INTRAC_VC the code 7, while specification.md and
-    arf.py both say 6, so voltage-clamp data is mislabeled by C++. arf.py in
-    turn has no EXTRAC_RAW, which the spec and the C++ enum both define as 23.
+
+def test_extrac_raw_still_missing_from_python():
+    """CHARACTERIZATION: arf.py has no EXTRAC_RAW.
+
+    The spec and the C++ enum both define it as 23. Adding it is an arf.py
+    change, which the remediation decisions put out of scope for now.
     """
     types_hpp = (REPO_ROOT / "c++" / "arf" / "types.hpp").read_text()
-    assert "INTRAC_VC = 7" in types_hpp
-    assert arf.DataTypes.INTRAC_CC == 5
-    assert not hasattr(arf.DataTypes, "INTRAC_VC") or arf.DataTypes.INTRAC_VC == 6
-    assert not hasattr(arf.DataTypes, "EXTRAC_RAW")
     assert "EXTRAC_RAW = 23" in types_hpp
+    assert not hasattr(arf.DataTypes, "EXTRAC_RAW")

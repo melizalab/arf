@@ -1,61 +1,61 @@
 FILE
-  attr arf_library = 'c++' (dtype=S4)
-  attr arf_library_version = <redacted> (dtype=S6)
-  attr arf_version = '2.1' (dtype=S4)
+  attr arf_library = 'c++' (dtype=S3)
+  attr arf_library_version = <redacted> (dtype=S5)
+  attr arf_version = '2.1' (dtype=S3)
   children-in-creation-order=[entry_001, entry_000]
 GROUP /entry_001
-  attr animal = 'bird_042' (dtype=S9)
-  attr experimenter = 'dmeliza' (dtype=S8)
-  attr protocol = 'playback' (dtype=S9)
+  attr animal = 'bird_042' (dtype=S8)
+  attr experimenter = 'dmeliza' (dtype=S7)
+  attr protocol = 'playback' (dtype=S8)
   attr timestamp = [1234567891, 1000] (dtype=<i8)
-  attr uuid = <redacted> (dtype=S37)
+  attr uuid = <redacted> (dtype=S36)
 DATASET /entry_001/pcm
   dtype=<f8 shape=(128,) maxshape=(None,) chunks=(128,) filters=[gzip:0]
   attr datatype = 1 (dtype=<i4)
   attr sampling_rate = 20000 (dtype=<i4)
-  attr units = 'mV' (dtype=S3)
+  attr units = 'mV' (dtype=S2)
   head=[1, 1.5, 2]
 DATASET /entry_001/spikes
   dtype=<f8 shape=(16,) maxshape=(None,) chunks=(16,) filters=[gzip:0]
   attr datatype = 1001 (dtype=<i4)
-  attr units = 's' (dtype=S2)
+  attr units = 's' (dtype=S1)
   head=[1, 1.01, 1.02]
 DATASET /entry_001/spike_samples
   dtype=<i4 shape=(16,) maxshape=(None,) chunks=(16,) filters=[gzip:0]
   attr datatype = 1001 (dtype=<i4)
   attr sampling_rate = 20000 (dtype=<i4)
-  attr units = 'samples' (dtype=S8)
+  attr units = 'samples' (dtype=S7)
   head=[1, 201, 401]
 DATASET /entry_001/intervals
   dtype=compound{name:S32, start:<u4, stop:<u4} shape=(4,) maxshape=(None,) chunks=(1024,) filters=[gzip:0]
   attr datatype = 2001 (dtype=<i4)
-  attr units = 'ms' (dtype=S3)
+  attr units = ['', 'ms', 'ms'] (dtype=S2)
   head=[['stim_00', 0, 50], ['stim_01', 100, 150], ['stim_02', 200, 250]]
 GROUP /entry_000
-  attr animal = 'bird_042' (dtype=S9)
-  attr experimenter = 'dmeliza' (dtype=S8)
-  attr protocol = 'playback' (dtype=S9)
+  attr animal = 'bird_042' (dtype=S8)
+  attr experimenter = 'dmeliza' (dtype=S7)
+  attr protocol = 'playback' (dtype=S8)
   attr timestamp = [1234567890, 0] (dtype=<i8)
-  attr uuid = <redacted> (dtype=S37)
+  attr uuid = <redacted> (dtype=S36)
 DATASET /entry_000/pcm
   dtype=<f8 shape=(128,) maxshape=(None,) chunks=(128,) filters=[gzip:0]
   attr datatype = 1 (dtype=<i4)
   attr sampling_rate = 20000 (dtype=<i4)
-  attr units = 'mV' (dtype=S3)
+  attr units = 'mV' (dtype=S2)
   head=[0, 0.5, 1]
 DATASET /entry_000/spikes
   dtype=<f8 shape=(16,) maxshape=(None,) chunks=(16,) filters=[gzip:0]
   attr datatype = 1001 (dtype=<i4)
-  attr units = 's' (dtype=S2)
+  attr units = 's' (dtype=S1)
   head=[0, 0.01, 0.02]
 DATASET /entry_000/spike_samples
   dtype=<i4 shape=(16,) maxshape=(None,) chunks=(16,) filters=[gzip:0]
   attr datatype = 1001 (dtype=<i4)
   attr sampling_rate = 20000 (dtype=<i4)
-  attr units = 'samples' (dtype=S8)
+  attr units = 'samples' (dtype=S7)
   head=[0, 200, 400]
 DATASET /entry_000/intervals
   dtype=compound{name:S32, start:<u4, stop:<u4} shape=(4,) maxshape=(None,) chunks=(1024,) filters=[gzip:0]
   attr datatype = 2001 (dtype=<i4)
-  attr units = 'ms' (dtype=S3)
+  attr units = ['', 'ms', 'ms'] (dtype=S2)
   head=[['stim_00', 0, 50], ['stim_01', 100, 150], ['stim_02', 200, 250]]

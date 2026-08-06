@@ -98,9 +98,15 @@ main(int argc, char ** argv)
                                                  arf::SPIKET);
                         discrete->write_attribute("sampling_rate", 20000);
 
-                        // complex event data: compound records with a start field
+                        // complex event data: compound records with a start
+                        // field. The spec wants one unit per field, in field
+                        // order -- the label carries none.
+                        std::vector<std::string> interval_units;
+                        interval_units.push_back("");
+                        interval_units.push_back("ms");
+                        interval_units.push_back("ms");
                         arf::packet_table_ptr intervals =
-                                e.create_packet_table<interval>("intervals", "ms",
+                                e.create_packet_table<interval>("intervals", interval_units,
                                                                 arf::STIMI);
                         for (int j = 0; j < nintervals; ++j) {
                                 interval record;

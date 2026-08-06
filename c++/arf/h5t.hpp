@@ -79,11 +79,27 @@ struct datatype_traits {
 	static hid_t value() { return H5Tcopy(int_dtype_traits<traits::digits>::value()); }
 };
 
+/**
+ * Strings are fixed-length and declared UTF-8.
+ *
+ * The specification constrains the class and CTYPE, and requires the declared
+ * CSET to match the encoding -- which ASCII did not, once a std::string held
+ * UTF-8. It does not constrain fixed versus variable length, except for uuid,
+ * where it demands a 36-byte string. Fixed-length is what this library writes:
+ * the characters live inline in the object header rather than on the file's
+ * global heap, with no pointer indirection and no per-read allocation, which
+ * matters because this library runs during acquisition. Variable-length
+ * attributes, which arf.py writes, are still *readable* -- see attribute::read.
+ *
+ * The width is set per value when the attribute is created; see
+ * node::write_attribute.
+ */
 template<>
 struct datatype_traits<std::string> {
 	static hid_t value() {
                 hid_t str = H5Tcopy(H5T_C_S1);
-                // H5Tset_cset(str, H5T_CSET_UTF8);
+                H5Tset_cset(str, H5T_CSET_UTF8);
+                H5Tset_strpad(str, H5T_STR_NULLPAD);
                 return str;
         }
 };
@@ -92,7 +108,8 @@ template<>
 struct datatype_traits<char const *> {
 	static hid_t value() {
                 hid_t str = H5Tcopy(H5T_C_S1);
-                // H5Tset_cset(str, H5T_CSET_UTF8);
+                H5Tset_cset(str, H5T_CSET_UTF8);
+                H5Tset_strpad(str, H5T_STR_NULLPAD);
                 return str;
         }
 };

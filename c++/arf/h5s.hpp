@@ -32,6 +32,10 @@ inline std::vector<hsize_t> guess_chunk(std::vector<hsize_t> const & shape, int 
 	if (ndims==0)
 		throw Exception("Scalar datasets can't be chunked");
 	std::vector<hsize_t> chunks(shape);
+	// H5Pset_chunk rejects a zero-length chunk, so an empty dataset -- which
+	// arf.py allows -- could not be created at all. Clamp before measuring.
+	for (int i = 0; i < ndims; ++i)
+		if (chunks[i] == 0) chunks[i] = 1;
 	float dset_size = std::accumulate(chunks.begin(), chunks.end(), 1.0, std::multiplies<float>()) * typesize;
 	float target_size = CHUNK_BASE * pow(2, log10(dset_size/(1024.0*1024)));
 	if (target_size > CHUNK_MAX)

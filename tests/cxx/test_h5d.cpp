@@ -136,12 +136,13 @@ TEST_CASE("datasets are chunked, and report their chunk shape") {
                                                       sizeof(double)));
 }
 
-TEST_CASE("every dataset carries a deflate filter, even at level zero") {
-        // CHARACTERIZATION: create_dataset applies H5Pset_deflate whenever
-        // compress > -1, and the default argument is 0. So the default is not
-        // "no compression" but "deflate at level 0", which still writes filter
-        // metadata and routes data through zlib. Only a negative value skips
-        // the filter entirely.
+TEST_CASE("every dataset is filtered by default, at deflate level 0") {
+        // Deliberate: level 0 stores the data uncompressed but still frames it
+        // through zlib, which costs about 16 bytes a chunk and gives every
+        // chunk an adler32. That integrity check is worth the overhead for
+        // recorded data, so it is the default rather than something callers
+        // have to ask for. A negative value opts out, and is the only value
+        // H5Pset_deflate itself rejects, which is what makes it the sentinel.
         arftest::handle_guard guard;
         arftest::scratch_file scratch("d_filters");
         file f(scratch.path, "w");
@@ -151,11 +152,33 @@ TEST_CASE("every dataset carries a deflate filter, even at level zero") {
         arf::dataset_ptr defaulted = entry.create_dataset("defaulted", data);
         CHECK(filter_count(*defaulted) == 1);
 
+        arf::dataset_ptr framed = entry.create_dataset("framed", data, 0);
+        CHECK(filter_count(*framed) == 1);
+
         arf::dataset_ptr squeezed = entry.create_dataset("squeezed", data, 9);
         CHECK(filter_count(*squeezed) == 1);
 
+        // opting out has to be explicit
         arf::dataset_ptr raw = entry.create_dataset("raw", data, -1);
         CHECK(filter_count(*raw) == 0);
+}
+
+TEST_CASE("deflate level 0 frames the data without compressing it") {
+        arftest::handle_guard guard;
+        arftest::scratch_file scratch("d_deflate0");
+        file f(scratch.path, "w");
+        group entry(f, "entry", true);
+        std::vector<double> flat(1 << 16, 1.0);
+
+        arf::dataset_ptr unfiltered = entry.create_dataset("unfiltered", flat, -1);
+        arf::dataset_ptr framed = entry.create_dataset("framed", flat, 0);
+        arf::dataset_ptr squeezed = entry.create_dataset("squeezed", flat, 9);
+        f.flush();
+
+        hsize_t plain = H5Dget_storage_size(unfiltered->hid());
+        // level 0 adds the zlib stream framing rather than shrinking anything
+        CHECK(H5Dget_storage_size(framed->hid()) > plain);
+        CHECK(H5Dget_storage_size(squeezed->hid()) < plain);
 }
 
 TEST_CASE("compression shrinks a compressible dataset") {
@@ -204,19 +227,22 @@ TEST_CASE("creating a dataset over an existing name throws") {
         CHECK_THROWS_AS(entry.create_dataset("pcm", arftest::ramp(8)), arf::Exception);
 }
 
-TEST_CASE("an empty dataset cannot be created") {
-        // CHARACTERIZATION: guess_chunk hands back a chunk of 0 for a
-        // zero-length extent (see the h5s suite), and H5Pset_chunk rejects it.
-        // Writing an empty channel therefore fails at creation time. arf.py
-        // allows empty datasets -- test_arf.py has an "empty-spikes" case -- so
-        // the two implementations disagree here.
+TEST_CASE("an empty dataset can be created and grown") {
+        // guess_chunk used to hand back a chunk of 0 for a zero-length extent,
+        // which H5Pset_chunk rejects, so an empty channel could not be written
+        // at all -- while arf.py allows one, as its "empty-spikes" case shows.
         arftest::handle_guard guard;
         arftest::scratch_file scratch("d_empty");
         file f(scratch.path, "w");
         group entry(f, "entry", true);
 
         std::vector<double> nothing;
-        CHECK_THROWS_AS(entry.create_dataset("empty", nothing), arf::Exception);
+        arf::dataset_ptr d = entry.create_dataset("empty", nothing);
+        CHECK(d->dataspace()->size() == 0);
+
+        // and it is resizable afterwards, being chunked with an unlimited max
+        d->write(arftest::ramp(8));
+        CHECK(d->dataspace()->size() == 8);
 }
 
 TEST_CASE("introspection releases the handles it opens") {

@@ -66,11 +66,11 @@ namespace arf {
  */
 class entry : public h5g::group {
 public:
-	typedef boost::shared_ptr<entry> ptr_type;
+        typedef boost::shared_ptr<entry> ptr_type;
 
-	/** Open an existing entry object */
-	entry(h5a::node const & parent, std::string const & name)
-		: h5g::group(parent, name) {
+        /** Open an existing entry object */
+        entry(h5a::node const & parent, std::string const & name)
+                : h5g::group(parent, name) {
                 if (has_attribute("uuid")) {
                         std::string s;
                         read_attribute("uuid",s);
@@ -78,89 +78,118 @@ public:
                 }
         }
 
-	/** Create a new entry object */
-	template <typename Type>
-	entry(h5a::node const & parent, std::string const & name,
-	      std::vector<Type> const & timestamp)
-		: h5g::group(parent, name, true),
+        /** Create a new entry object */
+        template <typename Type>
+        entry(h5a::node const & parent, std::string const & name,
+              std::vector<Type> const & timestamp)
+                : h5g::group(parent, name, true),
                   _uuid(boost::uuids::random_generator()()) {
-		write_attribute<boost::int64_t, Type>("timestamp", timestamp);
-		write_attribute("uuid", boost::uuids::to_string(_uuid));
-	}
+                write_attribute<boost::int64_t, Type>("timestamp", timestamp);
+                // to_string gives 36 characters, and string attributes are
+                // sized to exactly their content, so this is the 36-byte
+                // H5T_STRING the specification asks for
+                write_attribute("uuid", boost::uuids::to_string(_uuid));
+        }
 
-	entry(h5a::node const & parent, std::string const & name,
+        entry(h5a::node const & parent, std::string const & name,
               boost::int64_t tv_sec, boost::int64_t tv_usec=0)
-		: h5g::group(parent, name, true),
+                : h5g::group(parent, name, true),
                   _uuid(boost::uuids::random_generator()()) {
                 boost::int64_t ts[2] = { tv_sec, tv_usec };
-		write_attribute("timestamp", ts, 2);
-		write_attribute("uuid", boost::uuids::to_string(_uuid));
-	}
+                write_attribute("timestamp", ts, 2);
+                // to_string gives 36 characters, and string attributes are
+                // sized to exactly their content, so this is the 36-byte
+                // H5T_STRING the specification asks for
+                write_attribute("uuid", boost::uuids::to_string(_uuid));
+        }
 
-	/**
-	 * Create a new dataset and add data to it.  Currently only 1D
-	 * data is supported.
-	 *
-	 * @param name  the name of the dataset
-	 * @param data  the data to store in the dataset
-	 * @param units the units of the data
-	 * @param datatype an integer code indicating the type of data
-	 * @param replace if true, drop existing dataset; otherwise appends data
-	 * @param compression integer code indicating compression ratio
-	 */
-	template <typename StorageType, typename MemType>
-	h5d::dataset::ptr_type
-	create_dataset(std::string const & name,
-		       std::vector<MemType> const & data,
-		       std::string const & units,
-		       DataType datatype=UNDEFINED,
-		       bool replace=false,
-		       int compression=0) {
-		if (contains(name) && replace)
-			unlink(name);
+        /**
+         * Create a new dataset and add data to it.  Currently only 1D
+         * data is supported.
+         *
+         * @param name  the name of the dataset
+         * @param data  the data to store in the dataset
+         * @param units the units of the data
+         * @param datatype an integer code indicating the type of data
+         * @param replace if true, drop existing dataset; otherwise appends data
+         * @param compression integer code indicating compression ratio (zlib).
+         * Default is 0 which provides some integrity protection, use -1 for no filtering.
+         */
+        template <typename StorageType, typename MemType>
+        h5d::dataset::ptr_type
+        create_dataset(std::string const & name,
+                       std::vector<MemType> const & data,
+                       std::string const & units,
+                       DataType datatype=UNDEFINED,
+                       bool replace=false,
+                       int compression=0) {
+                if (contains(name) && replace)
+                        unlink(name);
 
-		h5d::dataset::ptr_type ds = h5g::group::create_dataset(name, data, compression);
-		ds->write_attribute("datatype",static_cast<int>(datatype));
-		ds->write_attribute("units",units);
-		return ds;
-	}
+                h5d::dataset::ptr_type ds = h5g::group::create_dataset(name, data, compression);
+                ds->write_attribute("datatype",static_cast<int>(datatype));
+                ds->write_attribute("units",units);
+                return ds;
+        }
 
-	template <typename Type>
-	h5d::dataset::ptr_type
-	create_dataset(std::string const & name,
-		       std::vector<Type> const & data,
-		       std::string const & units,
-		       DataType datatype,
-		       bool replace=false,
-		       int compression=0) {
-		return create_dataset<Type,Type>(name,data,units,datatype,replace,compression);
-	}
+        template <typename Type>
+        h5d::dataset::ptr_type
+        create_dataset(std::string const & name,
+                       std::vector<Type> const & data,
+                       std::string const & units,
+                       DataType datatype,
+                       bool replace=false,
+                       int compression=0) {
+                return create_dataset<Type,Type>(name,data,units,datatype,replace,compression);
+        }
 
-	/**
-	 * Create a new packet table dataset. Packet table datasets
-	 * are useful for writing a stream of data. No type conversion
-	 * is supported, but the interface is extremely simple.
-	 *
-	 * @param name  the name of the dataset
-	 * @param units the units of the data
-	 * @param datatype an integer code indicating the type of data
-	 * @param replace if true, drop existing dataset; otherwise appends data
-	 * @param compression integer code indicating compression ratio
-	 */
-	template <typename StorageType>
-	typename h5pt::packet_table::ptr_type
-	create_packet_table(std::string const & name,
-			    std::string const & units,
-			    DataType datatype,
-			    bool replace=false,
-			    hsize_t chunk_size=1024,
-			    int compression=0) {
+        /**
+         * Create a new packet table dataset. Packet table datasets
+         * are useful for writing a stream of data. No type conversion
+         * is supported, but the interface is extremely simple.
+         *
+         * @param name  the name of the dataset
+         * @param units the units of the data
+         * @param datatype an integer code indicating the type of data
+         * @param replace if true, drop existing dataset; otherwise appends data
+         * @param compression integer code indicating compression ratio (zlib).
+         * Default is 0 which provides some integrity protection, use -1 for no filtering.
+         */
+        template <typename StorageType>
+        typename h5pt::packet_table::ptr_type
+        create_packet_table(std::string const & name,
+                            std::string const & units,
+                            DataType datatype,
+                            bool replace=false,
+                            hsize_t chunk_size=1024,
+                            int compression=0) {
                 h5pt::packet_table::ptr_type pt =
                         h5g::group::create_packet_table<StorageType>(name, replace, chunk_size, compression);
-		pt->write_attribute("datatype",static_cast<int>(datatype));
-		pt->write_attribute("units",units);
-		return pt;
-	}
+                pt->write_attribute("datatype",static_cast<int>(datatype));
+                pt->write_attribute("units",units);
+                return pt;
+        }
+
+        /**
+         * Create a packet table for complex event data, which the
+         * specification requires to carry one unit per compound field.
+         *
+         * @param units one element per field of StorageType, in field order
+         */
+        template <typename StorageType>
+        typename h5pt::packet_table::ptr_type
+        create_packet_table(std::string const & name,
+                            std::vector<std::string> const & units,
+                            DataType datatype,
+                            bool replace=false,
+                            hsize_t chunk_size=1024,
+                            int compression=0) {
+                h5pt::packet_table::ptr_type pt =
+                        h5g::group::create_packet_table<StorageType>(name, replace, chunk_size, compression);
+                pt->write_attribute("datatype",static_cast<int>(datatype));
+                pt->write_attribute("units",units);
+                return pt;
+        }
 
         boost::uuids::uuid const & uuid() const { return _uuid; }
 
@@ -177,28 +206,28 @@ private:
 class file : public h5f::file {
 
 public:
-	typedef boost::shared_ptr<file> ptr_type;
+        typedef boost::shared_ptr<file> ptr_type;
 
-	/**
-	 * Open or create an ARF file.  File access mode can be one
-	 * of the following values:
-	 * 'r' : read-only; file must exist
-	 * 'a' : read-write access, creating file if necessary
-	 * 'w' : read-write access; truncates file if it exists
-	 *
-	 * @param name  the path of the file to open/create
-	 * @param mode  the mode to open the file
-	 */
-	file(std::string const & name, std::string const & mode)
-		: h5f::file(name, mode) {
-		// set root-level attributes
+        /**
+         * Open or create an ARF file.  File access mode can be one
+         * of the following values:
+         * 'r' : read-only; file must exist
+         * 'a' : read-write access, creating file if necessary
+         * 'w' : read-write access; truncates file if it exists
+         *
+         * @param name  the path of the file to open/create
+         * @param mode  the mode to open the file
+         */
+        file(std::string const & name, std::string const & mode)
+                : h5f::file(name, mode) {
+                // set root-level attributes
                 // TODO check whether file exists and already has version information
-		if (mode=="w" || mode=="a") {
+                if (mode=="w" || mode=="a") {
                         write_attribute("arf_library_version", ARF_LIBRARY_VERSION);
                         write_attribute("arf_library", "c++");
-			write_attribute("arf_version", ARF_VERSION);
-		}
-	}
+                        write_attribute("arf_version", ARF_VERSION);
+                }
+        }
 
 };
 
