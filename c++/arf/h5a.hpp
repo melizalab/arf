@@ -239,8 +239,8 @@ public:
 	 * property of the value, so the attribute has to be recreated whenever
 	 * the length changes. Sizing to `value.size()` rather than
 	 * `value.size() + 1` is what makes a uuid come out as the 36-byte
-	 * string the specification asks for, and matches both arf.py's |S36 and
-	 * the MATLAB helpers. An empty value still needs a byte to live in.
+	 * string the specification asks for, and matches arf.py's |S36. An empty
+	 * value still needs a byte to live in.
 	 */
 	void write_attribute(std::string const & name, std::string const & value) {
 		delete_attribute(name);
