@@ -615,3 +615,64 @@ def test_check_file_structure_ignores_nested_entries(tmp_file):
     # aliasing inside a nested entry is not this function's business
     inner["alias"] = shared
     assert arf.check_file_structure(tmp_file) == []
+
+
+def test_select_interval_with_scalar_units_on_compound_data(tmp_entry):
+    """Compound datasets in the wild carry one unit for the whole record.
+
+    The spec asks for one per field, and arfx documents jrecord as a producer
+    of the scalar form. Indexing into it would read its first character, so
+    "samples" becomes "s" and the window silently stops being rescaled.
+    """
+    records = np.rec.fromrecords(
+        [(500, 1), (5000, 0), (900000, 1)], names=("start", "state")
+    )
+    dset = tmp_entry.create_dataset("evt", data=records, maxshape=(None,))
+    dset.attrs["units"] = b"samples"
+    dset.attrs["sampling_rate"] = 1000
+
+    selected, offset = arf.select_interval(dset, 0.4, 0.6)
+    assert offset == 400
+    assert list(selected["start"]) == [100]
+
+
+def test_select_interval_offsets_an_integer_start_field(tmp_entry):
+    """The offset is subtracted in place, so it has to match the field's type.
+
+    A window that is not rescaled leaves begin as the float the caller passed,
+    and numpy will not subtract that from an integer field in place.
+    """
+    records = np.rec.fromrecords([(1, 0), (5, 1)], names=("start", "state"))
+    dset = arf.create_dataset(
+        tmp_entry, "evt", records, units=("s", ""), maxshape=(None,)
+    )
+    selected, offset = arf.select_interval(dset, 0.0, 2.0)
+    assert list(selected["start"]) == [1]
+    assert selected["start"].dtype == records["start"].dtype
+
+
+def test_file_version_reports_without_judging(tmp_path):
+    """A migration tool has to read the version *because* it is out of range."""
+    path = _file_declaring(tmp_path / "old.arf", "1.1")
+    with h5.File(path) as fp:
+        assert str(arf.file_version(fp)) == "1.1"
+        with pytest.raises(DeprecationWarning):
+            arf.check_file_version(fp)
+
+    path = _file_declaring(tmp_path / "new.arf", "3.0")
+    with h5.File(path) as fp:
+        assert str(arf.file_version(fp)) == "3.0"
+        with pytest.raises(FutureWarning):
+            arf.check_file_version(fp)
+
+
+def test_file_version_still_refuses_what_it_cannot_read(tmp_path):
+    path = _file_declaring(tmp_path / "none.arf", None)
+    with h5.File(path) as fp:
+        with pytest.raises(UserWarning):
+            arf.file_version(fp)
+
+    path = _file_declaring(tmp_path / "bad.arf", "not-a-version")
+    with h5.File(path) as fp:
+        with pytest.raises(UserWarning, match="Unparseable"):
+            arf.file_version(fp)

@@ -313,7 +313,10 @@ def select_interval(dset: h5.Dataset, begin: float, end: float):
         t = dset["start"]
         idx = (t >= begin) & (t < end)
         data = dset[idx]
-        data["start"] -= begin
+        # NB: cast to the field's own type. begin is only an integer when the
+        # window was rescaled, and subtracting a float in place from an integer
+        # field raises rather than converting.
+        data["start"] -= data.dtype["start"].type(begin)
     elif is_time_series(dset):
         data = dset[slice(begin, end)]
     else:
@@ -326,23 +329,21 @@ def select_interval(dset: h5.Dataset, begin: float, end: float):
     return data, begin
 
 
-def check_file_version(file: h5.File):
-    """Check the ARF version attribute of file for compatibility.
+def file_version(file: h5.File):
+    """Return the specification version a file claims, without judging it.
 
-    Raises DeprecationWarning for backwards-incompatible files, FutureWarning
-    for (potentially) forwards-incompatible files, and UserWarning for files
-    that may not have been created by an ARF library.
+    check_file_version refuses versions this library cannot vouch for, which is
+    the wrong answer for a caller whose whole job is handling old files -- a
+    migration tool has to read the version *because* it is out of range. This
+    reports what the file says and leaves the decision to the caller.
 
-    Returns the version for the file
+    Raises UserWarning if the file declares no version, or one that cannot be
+    parsed; there is nothing to report in those cases.
 
     """
     from packaging.version import InvalidVersion, Version
 
     ver = file.attrs.get("arf_version", None)
-    # Very old files recorded only the library version, back when the libraries
-    # tracked the specification's major version and the two could stand in for
-    # each other. From 3.0 on they version independently, so a library version
-    # that high says nothing about which specification the file follows.
     from_library = ver is None
     if from_library:
         try:
@@ -355,37 +356,51 @@ def check_file_version(file: h5.File):
     with contextlib.suppress(LookupError, AttributeError):
         # if the attribute is stored as a string, it's ascii-encoded
         ver = ver.decode("ascii")
-    # should be backwards compatible after 1.1
     try:
-        file_version = Version(ver)
+        parsed = Version(ver)
     except InvalidVersion as err:
-        # the documented contract is to signal with one of the three warning
-        # types; letting packaging's exception out crashed the caller instead
         raise UserWarning(
             f"Unparseable ARF version {ver!r} for {file.filename};"
             "created by another program?"
         ) from err
-    low, high = supported_spec_versions()
-    if from_library and file_version >= Version(high):
+    if from_library and parsed >= Version(supported_spec_versions()[1]):
         raise UserWarning(
             f"{file.filename} has no arf_version, and its arf_library_version "
-            f"({file_version}) cannot stand in for one: the libraries have "
+            f"({parsed}) cannot stand in for one: the libraries have "
             "versioned independently of the specification since 3.0"
         )
-    if file_version < Version(low):
+    return parsed
+
+
+def check_file_version(file: h5.File):
+    """Check the ARF version attribute of file for compatibility.
+
+    Raises DeprecationWarning for files older than this library supports,
+    FutureWarning for files from a later major version of the specification,
+    and UserWarning for files that may not have been created by an ARF library.
+
+    Returns the version for the file. Use file_version() to read the version
+    without the compatibility check.
+
+    """
+    from packaging.version import Version
+
+    parsed = file_version(file)
+    low, high = supported_spec_versions()
+    if parsed < Version(low):
         raise DeprecationWarning(
-            f"{file.filename} claims ARF specification {file_version}, which "
+            f"{file.filename} claims ARF specification {parsed}, which "
             f"predates {low}; the required attributes changed at 2.0. "
             "The arfx package ships a script that upgrades old files."
         )
-    elif file_version >= Version(high):
+    elif parsed >= Version(high):
         raise FutureWarning(
-            f"{file.filename} claims ARF specification {file_version}, which "
+            f"{file.filename} claims ARF specification {parsed}, which "
             f"postdates this library's {spec_version}. A major revision may "
             "change required attributes, so its contents cannot be trusted "
             "here; upgrade arf to a release that implements it."
         )
-    return file_version
+    return parsed
 
 
 def _link_count(obj: h5.HLObject) -> int:
@@ -588,14 +603,21 @@ def _sample_timebase(dset: h5.Dataset) -> bool:
     if is_time_series(dset):
         return True
     units = dset.attrs.get("units", None)
+    if units is None:
+        return False
     if is_marked_pointproc(dset):
         names = dset.dtype.names
-        if units is None or "start" not in names:
+        if names is None or "start" not in names:
             return False
-        try:
-            units = units[names.index("start")]
-        except (IndexError, TypeError):
-            return False
+        # NB: a compound dataset is supposed to carry one unit per field, but
+        # files in the wild carry a single scalar for the whole record. Treat
+        # that as applying to every field rather than indexing into the string,
+        # which would silently read its first character.
+        if not isinstance(units, (str, bytes)):
+            try:
+                units = units[names.index("start")]
+            except (IndexError, KeyError, TypeError):
+                return False
     return _decode_attribute(units) == "samples"
 
 
