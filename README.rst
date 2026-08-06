@@ -18,6 +18,9 @@ arf
 .. |PythonVersions| image:: https://img.shields.io/pypi/pyversions/arf.svg
 .. _PythonVersions: https://pypi.python.org/pypi/arf/
 
+.. |BuildStatus| image:: https://github.com/melizalab/arf/actions/workflows/tests-cxx.yml/badge.svg
+.. _BuildStatus: https://github.com/melizalab/arf/actions/workflows/tests-cxx.yml
+
 
 The Advanced Recording Format `arf <https://meliza.org/spec:1/arf/>`__
 is an open standard for storing data from neuronal, acoustic, and
@@ -61,22 +64,16 @@ installation
 
 ARF files require HDF5>=1.8 (http://www.hdfgroup.org/HDF5).
 
-The python interface requires Python 3.7 or greater and h5py>=3.8. The last
+The python interface requires Python 3.11 or greater and h5py>=3.11. The last
 version of this package to support Python 2 was ``2.5.1``. The last version to
-support h5py 2 was ``2.6.7``. To install the module:
-
-.. code:: bash
-
-   pip install arf
+support h5py 2 was ``2.6.7``.
 
 The C++ interface needs only HDF5 and a C++11 compiler; it has no other
 dependencies. If writing multithreaded code, HDF5 needs to be compiled with
-``--enable-threadsafe``. The interface is header-only and does not need
-to be compiled. To install:
+``--enable-threadsafe``. The interface is header-only and does not need to be
+compiled. The recommended approach is to vendor a tagged version of the project
+and include the headers.
 
-.. code:: bash
-
-   make install
 
 version information
 ~~~~~~~~~~~~~~~~~~~
@@ -85,12 +82,9 @@ The specification and implementations provided in this project use a
 form of semantic versioning (http://semver.org). Specifications receive
 a major and minor version number. Changes to minor version numbers must
 be backwards compatible (i.e., only added requirements). The current
-released version of the ARF specification is ``2.1``.
+released version of the ARF specification is ``2.2``.
 
-Implementation versions are synchronized with the major version of the
-specification but otherwise evolve independently. For example, the
-python ``arf`` package version ``2.1.0`` is compatible with any ARF
-version ``2.x``.
+Implementation versions evolve independently from the specification. The current versions of the python and C++ packages will write ARF files using the ``2.2`` spec but can read any ``2.x`` ARF file.
 
 There was no public release of arf prior to ``2.0``.
 
@@ -132,11 +126,12 @@ PCM format):
 contributing
 ~~~~~~~~~~~~
 
-ARF is under active development and we welcome comments and
-contributions from neuroscientists and behavioral biologists interested
-in using it. We’re particularly interested in use cases that don’t fit
-the current specification. Please post issues or contact Dan Meliza (dan
-at meliza.org) directly.
+ARF has been used by the Meliza lab for auditory systems neuroscience since 2013
+and by Dan Meliza since he was a postdoc in 2006. We continue to maintain it,
+and we welcome comments and contributions from neuroscientists and behavioral
+biologists interested in using it. We’re particularly interested in use cases
+that don’t fit the current specification. Please post issues or contact Dan
+Meliza (dan at meliza.org) directly.
 
 related projects
 ~~~~~~~~~~~~~~~~
