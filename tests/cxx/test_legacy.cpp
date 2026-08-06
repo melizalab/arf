@@ -80,9 +80,8 @@ struct datatype_traits<interval> {
 
 TEST_SUITE("legacy") {
 
-// no handle_guard: reopening an entry reads its uuid string, which leaks one
-// identifier per entry (see the h5a suite)
 TEST_CASE("a file of many entries round trips") {
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("legacy_bulk");
         std::vector<float> const data = samples();
 
@@ -167,6 +166,7 @@ TEST_CASE("a file of many entries round trips") {
 }
 
 TEST_CASE("entries keep their uuid across a close and reopen") {
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("legacy_uuid");
         std::string first;
         {

@@ -153,9 +153,13 @@ public:
 		_self = h5e::check_error(H5Tcopy(other.hid()));
 	}
 
-	datatype(hid_t dtype_id) {
-		_self = h5e::check_error(H5Tcopy(dtype_id));
-	}
+	/**
+	 * Take ownership of a datatype handle, as h5s::dataspace does. Callers
+	 * holding a borrowed handle must H5Tcopy it themselves. This used to
+	 * copy, which left the caller's handle unowned and leaking at every
+	 * call site -- all of which pass a freshly returned handle.
+	 */
+	explicit datatype(hid_t dtype_id) : handle(h5e::check_error(dtype_id)) {}
 
 	datatype & operator= (datatype const & other) {
 		// release old handle

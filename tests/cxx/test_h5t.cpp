@@ -98,16 +98,17 @@ TEST_CASE("assignment releases the old handle and takes a fresh copy") {
         CHECK(H5Iis_valid(before) == 0);
 }
 
-TEST_CASE("constructing from a hid_t copies rather than adopts") {
+TEST_CASE("constructing from a hid_t adopts the handle") {
+        // Matches h5s::dataspace(hid_t). Callers holding a borrowed handle
+        // must copy it themselves; every in-library call site passes a
+        // freshly returned one, which is why this used to leak.
         hid_t native = H5Tcopy(H5T_NATIVE_INT);
         {
                 datatype wrapped(native);
-                CHECK(wrapped.hid() != native);
-                CHECK(wrapped.size() == H5Tget_size(native));
+                CHECK(wrapped.hid() == native);
+                CHECK(wrapped.size() == sizeof(int));
         }
-        // the wrapper's destructor must not have closed our handle
-        CHECK(H5Iis_valid(native) > 0);
-        H5Tclose(native);
+        CHECK(H5Iis_valid(native) == 0);
 }
 
 TEST_CASE("equality compares the underlying types") {

@@ -38,6 +38,7 @@ attribute_count(arf::h5a::node & node, char const * name)
 TEST_SUITE("arf") {
 
 TEST_CASE("a new file identifies itself as arf") {
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("arf_version");
         arf::file f(scratch.path, "w");
 
@@ -58,6 +59,7 @@ TEST_CASE("opening for append rewrites the version attributes") {
         // identity onto the file, so appending one entry to a file written by
         // arf.py silently relabels it as a c++ file at whatever version this
         // library happens to be. Provenance is lost with no warning.
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("arf_append");
         {
                 arf::h5f::file plain(scratch.path, "w");
@@ -106,6 +108,7 @@ TEST_CASE("a timestamp can also be supplied as a vector") {
 }
 
 TEST_CASE("an entry gets a uuid that survives reopening") {
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("arf_uuid");
         arf::file f(scratch.path, "w");
 
@@ -123,6 +126,7 @@ TEST_CASE("the uuid attribute is one byte wider than the spec allows") {
         // sizes string attributes at value.size()+1 to leave room for a
         // terminator, so C++ writes 37. Readers that assume 36 see a trailing
         // NUL; h5py reports a different dtype for the same logical value.
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("arf_uuid_width");
         arf::file f(scratch.path, "w");
         arf::entry e(f, "entry_000", 1, 0);
@@ -131,7 +135,7 @@ TEST_CASE("the uuid attribute is one byte wider than the spec allows") {
 }
 
 TEST_CASE("datasets created through an entry carry units and datatype") {
-        // no handle_guard: reading the units string leaks, per the h5a suite
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("arf_dataset");
         arf::file f(scratch.path, "w");
         arf::entry e(f, "entry_000", 1, 0);
@@ -170,6 +174,7 @@ TEST_CASE("without replace, a second dataset of the same name throws") {
 }
 
 TEST_CASE("packet tables created through an entry carry units and datatype") {
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("arf_pt");
         arf::file f(scratch.path, "w");
         arf::entry e(f, "entry_000", 1, 0);

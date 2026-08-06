@@ -82,8 +82,8 @@ TEST_CASE("assignment releases the old handle") {
 }
 
 TEST_CASE("constructing from a hid_t adopts the handle") {
-        // NB: the opposite of h5t::datatype(hid_t), which copies. See backlog
-        // item 8 -- the two wrappers disagree about ownership.
+        // h5t::datatype(hid_t) does the same; the two wrappers agree about
+        // ownership now that backlog item 8 is resolved.
         hid_t native = H5Screate_simple(1, dims(5).data(), NULL);
         {
                 dataspace wrapped(native);

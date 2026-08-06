@@ -44,11 +44,8 @@ struct datatype_traits<interval> {
 
 TEST_SUITE("h5pt") {
 
-// NB: no case here uses arftest::handle_guard, because every packet table
-// leaks two identifiers. That is pinned deliberately in "packet tables are
-// never closed"; until it is fixed a guard would fire in every case.
-
 TEST_CASE("a packet table appends across many writes") {
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("pt_append");
         file f(scratch.path, "w");
         group entry(f, "entry", true);
@@ -62,6 +59,7 @@ TEST_CASE("a packet table appends across many writes") {
 }
 
 TEST_CASE("packets can be written from a bare pointer") {
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("pt_pointer");
         file f(scratch.path, "w");
         group entry(f, "entry", true);
@@ -79,6 +77,7 @@ TEST_CASE("packets can be written from a bare pointer") {
 }
 
 TEST_CASE("data written as packets reads back through the dataset interface") {
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("pt_read");
         file f(scratch.path, "w");
         group entry(f, "entry", true);
@@ -104,6 +103,7 @@ TEST_CASE("data written as packets reads back through the dataset interface") {
 }
 
 TEST_CASE("compound records round trip") {
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("pt_compound");
         file f(scratch.path, "w");
         group entry(f, "entry", true);
@@ -127,6 +127,7 @@ TEST_CASE("compound records round trip") {
 }
 
 TEST_CASE("chunk size is configurable") {
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("pt_chunks");
         file f(scratch.path, "w");
         group entry(f, "entry", true);
@@ -137,6 +138,7 @@ TEST_CASE("chunk size is configurable") {
 }
 
 TEST_CASE("replace drops an existing table") {
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("pt_replace");
         file f(scratch.path, "w");
         group entry(f, "entry", true);
@@ -151,14 +153,12 @@ TEST_CASE("replace drops an existing table") {
         CHECK(second->dataspace()->size() == 0);
 }
 
-TEST_CASE("packet tables are never closed") {
-        // CHARACTERIZATION: known bug. ~packet_table guards H5PTclose with
-        // `H5PTis_valid(_ptself) > 0`, but H5PTis_valid follows the herr_t
-        // convention -- 0 means valid, negative means not -- rather than the
-        // htri_t convention of H5Iis_valid, which the guard was clearly copied
-        // from. The test is therefore false for exactly the tables that need
-        // closing, so H5PTclose never runs. Each table strands its packet-table
-        // identifier and the dataset identifier underneath it.
+TEST_CASE("packet tables release both of their handles") {
+        // A packet table holds two: the H5PT handle and the dataset
+        // underneath it. ~packet_table used to guard H5PTclose with
+        // `H5PTis_valid(...) > 0`, but H5PTis_valid returns herr_t, where 0
+        // means valid -- not htri_t like H5Iis_valid. The guard was false for
+        // exactly the tables that needed closing, so none was ever closed.
         arftest::scratch_file scratch("pt_leak");
         file f(scratch.path, "w");
         group entry(f, "entry", true);
@@ -168,7 +168,7 @@ TEST_CASE("packet tables are never closed") {
                 arf::packet_table_ptr pt = entry.create_packet_table<float>("stream");
                 pt->write(std::vector<float>(8, 1.0f));
         }
-        CHECK(arftest::handle_guard::open_handles() == before + 2);
+        CHECK(arftest::handle_guard::open_handles() == before);
 }
 
 TEST_CASE("creating over an existing table silently hands back the old one") {
@@ -181,6 +181,7 @@ TEST_CASE("creating over an existing table silently hands back the old one") {
         // nonsense identifier. The constructor then opens the pre-existing
         // dataset, and the caller gets a half-built object whose writes go
         // nowhere.
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("pt_noreplace");
         file f(scratch.path, "w");
         group entry(f, "entry", true);
@@ -195,6 +196,7 @@ TEST_CASE("creating over an existing table silently hands back the old one") {
 }
 
 TEST_CASE("an existing table can be reopened") {
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("pt_reopen");
         file f(scratch.path, "w");
         {

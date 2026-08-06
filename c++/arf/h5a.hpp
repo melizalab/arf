@@ -74,9 +74,10 @@ public:
 	}
 
 	void write(std::string const & value) {
-		hid_t type = H5Aget_type(_self);
-		h5e::check_error(H5Awrite(_self, type, value.c_str()));
-		H5Tclose(type);
+		// the wrapper owns the handle, so it is released even if the
+		// write throws
+		h5t::datatype type(h5e::check_error(H5Aget_type(_self)));
+		h5e::check_error(H5Awrite(_self, type.hid(), value.c_str()));
 	}
 
 
@@ -105,11 +106,13 @@ public:
 	}
 
 	void read(std::string & str) {
-		hid_t type = H5Aget_type(_self);
-		if (H5Tget_class(type)!=H5T_STRING)
+		// the wrapper owns the handle, so it is released on the throw
+		// path as well as the success path
+		h5t::datatype type(h5e::check_error(H5Aget_type(_self)));
+		if (H5Tget_class(type.hid())!=H5T_STRING)
 			throw Exception("Attempt to read non-string attribute into string");
-		boost::scoped_array<char> buf(new char[H5Tget_size(type)]);
-		h5e::check_error(H5Aread(_self, type, buf.get()));
+		boost::scoped_array<char> buf(new char[type.size()]);
+		h5e::check_error(H5Aread(_self, type.hid(), buf.get()));
 		str.assign(buf.get());
 	}
 

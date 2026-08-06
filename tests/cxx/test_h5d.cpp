@@ -171,11 +171,8 @@ TEST_CASE("compression shrinks a compressible dataset") {
         CHECK(H5Dget_storage_size(squeezed->hid()) < H5Dget_storage_size(raw->hid()));
 }
 
-// NB: cases below that call dataset::datatype() omit arftest::handle_guard,
-// because each such call leaks an identifier. Pinned once, deliberately, in
-// "dataset::datatype leaks an identifier per call".
-
 TEST_CASE("the storage type can differ from the memory type") {
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("d_convert");
         file f(scratch.path, "w");
         group entry(f, "entry", true);
@@ -222,13 +219,12 @@ TEST_CASE("an empty dataset cannot be created") {
         CHECK_THROWS_AS(entry.create_dataset("empty", nothing), arf::Exception);
 }
 
-TEST_CASE("dataset::datatype leaks an identifier per call") {
-        // CHARACTERIZATION: known bug, and the concrete cost of backlog item 8.
-        // dataset::datatype() passes the result of H5Dget_type into
-        // h5t::datatype(hid_t), which *copies* it with H5Tcopy -- so nothing
-        // ever owns or closes the original. dataspace() next door is clean,
-        // because h5s::dataspace(hid_t) adopts instead. The two wrappers
-        // disagree about ownership and one of them leaks.
+TEST_CASE("introspection releases the handles it opens") {
+        // dataset::datatype() hands the result of H5Dget_type to
+        // h5t::datatype(hid_t), which used to *copy* it, leaving the original
+        // unowned. dataspace() next door was always clean because
+        // h5s::dataspace(hid_t) adopts. Both wrappers adopt now.
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("d_typeleak");
         file f(scratch.path, "w");
         group entry(f, "entry", true);
@@ -236,7 +232,7 @@ TEST_CASE("dataset::datatype leaks an identifier per call") {
 
         ssize_t before = arftest::handle_guard::open_handles();
         d->datatype();
-        CHECK(arftest::handle_guard::open_handles() == before + 1);
+        CHECK(arftest::handle_guard::open_handles() == before);
 
         before = arftest::handle_guard::open_handles();
         d->dataspace();
@@ -244,6 +240,7 @@ TEST_CASE("dataset::datatype leaks an identifier per call") {
 }
 
 TEST_CASE("datasets expose their dataspace and datatype") {
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("d_introspect");
         file f(scratch.path, "w");
         group entry(f, "entry", true);

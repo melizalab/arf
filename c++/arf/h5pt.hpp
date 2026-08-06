@@ -49,7 +49,10 @@ public:
 	}
 
 	~packet_table() {
-                if (H5PTis_valid(_ptself) > 0) {
+                // NB: H5PTis_valid returns herr_t, so any non-negative value
+                // means valid. It is not htri_t like H5Iis_valid, where only a
+                // positive value does.
+                if (H5PTis_valid(_ptself) >= 0) {
                         H5PTclose(_ptself);
                 }
 	}

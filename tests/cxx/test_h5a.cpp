@@ -59,12 +59,8 @@ TEST_CASE("vector attributes round trip") {
         CHECK(read == counts());
 }
 
-// NB: cases below that read a string attribute deliberately omit
-// arftest::handle_guard, because every such read leaks an hdf5 identifier.
-// That leak is pinned once, on purpose, in "reading a string attribute leaks a
-// datatype handle".
-
 TEST_CASE("string attributes round trip") {
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("a_string");
         file f(scratch.path, "w");
         group node(f, "entry", true);
@@ -77,6 +73,7 @@ TEST_CASE("string attributes round trip") {
 }
 
 TEST_CASE("writing again replaces the value") {
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("a_overwrite");
         file f(scratch.path, "w");
         group node(f, "entry", true);
@@ -113,6 +110,7 @@ TEST_CASE("has_attribute and delete_attribute") {
 }
 
 TEST_CASE("attributes can be written by chaining") {
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("a_chain");
         file f(scratch.path, "w");
         group node(f, "entry", true);
@@ -150,6 +148,7 @@ TEST_CASE("the storage type can differ from the memory type") {
 }
 
 TEST_CASE("reading a non-string attribute as a string throws") {
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("a_wrongtype");
         file f(scratch.path, "w");
         group node(f, "entry", true);
@@ -184,14 +183,14 @@ TEST_CASE("an attribute reports its own name and shape") {
         // there is deliberately no test that does it.
 }
 
-TEST_CASE("reading a string attribute leaks a datatype handle") {
-        // CHARACTERIZATION: known bug. attribute::read(std::string&) opens a
-        // datatype with H5Aget_type and never closes it -- unlike
-        // attribute::write(std::string const&) three lines above, which does.
-        // One identifier is leaked per read, on the success path and on the
-        // throw path alike. arf::entry's open-existing constructor reads the
-        // uuid attribute, so walking a file leaks one handle per entry, and
-        // hdf5 will not fully close a file while identifiers remain open.
+TEST_CASE("reading a string attribute releases its datatype") {
+        // attribute::read(std::string&) opens a datatype with H5Aget_type and
+        // used to drop it on the floor, on the success path and the throw path
+        // alike. arf::entry's open-existing constructor reads the uuid, so a
+        // walk of a file leaked one handle per entry, and hdf5 will not fully
+        // close a file while identifiers remain open. The handle now belongs
+        // to an h5t::datatype, which releases it however the function exits.
+        arftest::handle_guard guard;
         arftest::scratch_file scratch("a_leak");
         file f(scratch.path, "w");
         group node(f, "entry", true);
@@ -200,17 +199,17 @@ TEST_CASE("reading a string attribute leaks a datatype handle") {
 
         ssize_t before = arftest::handle_guard::open_handles();
         node.read_attribute<std::string>("label");
-        CHECK(arftest::handle_guard::open_handles() == before + 1);
+        CHECK(arftest::handle_guard::open_handles() == before);
 
-        // reading an int is clean, so this is specific to the string overload
         before = arftest::handle_guard::open_handles();
         node.read_attribute<int>("count");
         CHECK(arftest::handle_guard::open_handles() == before);
 
-        // and the early return on a type mismatch leaks the same way
+        // including the early return on a type mismatch, which is the path
+        // that used to be missed
         before = arftest::handle_guard::open_handles();
         CHECK_THROWS_AS(node.read_attribute<std::string>("count"), arf::Exception);
-        CHECK(arftest::handle_guard::open_handles() == before + 1);
+        CHECK(arftest::handle_guard::open_handles() == before);
 }
 
 TEST_CASE("attributes leak no handles") {
