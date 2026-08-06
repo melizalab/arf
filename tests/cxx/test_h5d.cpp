@@ -1,5 +1,8 @@
 /* @file test_h5d.cpp
  * @brief unit tests for arf/h5d.hpp -- datasets
+ *
+ * Copyright (C) 2026 C Daniel Meliza <dan||meliza.org>
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <vector>

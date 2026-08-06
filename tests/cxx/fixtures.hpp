@@ -1,5 +1,8 @@
 /* @file fixtures.hpp
  * @brief Shared helpers for the arf C++ test suite.
+ *
+ * Copyright (C) 2026 C Daniel Meliza <dan||meliza.org>
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #ifndef ARF_TEST_FIXTURES_HH

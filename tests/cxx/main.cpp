@@ -7,6 +7,9 @@
  * H5close() is called after the run so that HDF5 releases its internal free
  * lists. Without it, leak checkers report those caches as leaks from the
  * library rather than from anything the tests did.
+ *
+ * Copyright (C) 2026 C Daniel Meliza <dan||meliza.org>
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #define DOCTEST_CONFIG_IMPLEMENT

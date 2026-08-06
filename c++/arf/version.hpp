@@ -1,5 +1,8 @@
 /* @file version.hpp
  * @brief checking a file's specification version
+ *
+ * Copyright (C) 2026 C Daniel Meliza <dan||meliza.org>
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #ifndef ARF_VERSION_HPP

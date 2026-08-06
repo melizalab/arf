@@ -1,5 +1,8 @@
 /* @file test_h5s.cpp
  * @brief unit tests for arf/h5s.hpp -- dataspaces and chunk guessing
+ *
+ * Copyright (C) 2026 C Daniel Meliza <dan||meliza.org>
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <vector>

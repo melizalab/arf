@@ -3,6 +3,9 @@
  *
  * These cover the layer that enforces the format: the attributes an arf file
  * and entry must carry, per specification.md.
+ *
+ * Copyright (C) 2026 C Daniel Meliza <dan||meliza.org>
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <string>

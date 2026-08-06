@@ -6,6 +6,9 @@
  * later *minor* revision of the specification needs no release here: by the
  * specification's own rule, a minor revision cannot change or remove a
  * required attribute.
+ *
+ * Copyright (C) 2026 C Daniel Meliza <dan||meliza.org>
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <string>

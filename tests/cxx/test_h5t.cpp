@@ -1,5 +1,8 @@
 /* @file test_h5t.cpp
  * @brief unit tests for arf/h5t.hpp -- datatypes
+ *
+ * Copyright (C) 2026 C Daniel Meliza <dan||meliza.org>
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <string>

@@ -164,3 +164,10 @@ i/o libraries
    formats.
 -  `neuroshare <http://neuroshare.org>`__ is a set of routines for
    reading and writing data in various proprietary and open formats.
+
+license
+~~~~~~~
+
+The reference implementations are released under the BSD 3-Clause License;
+see ``COPYING``. The Specification itself (``specification.md``) is separately
+licensed under the GNU General Public License version 3 or later.

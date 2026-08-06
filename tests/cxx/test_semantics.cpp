@@ -12,6 +12,9 @@
  *
  * arf::handle is not polymorphic: its destructor is protected and non-virtual,
  * so every wrapper is the size of the identifier it holds.
+ *
+ * Copyright (C) 2026 C Daniel Meliza <dan||meliza.org>
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <type_traits>

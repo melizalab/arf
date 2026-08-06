@@ -1,4 +1,6 @@
 # -*- mode: python -*-
+# Copyright (C) 2006-2026 C Daniel Meliza
+# SPDX-License-Identifier: BSD-3-Clause
 """
 This is ARF, a python library for storing and accessing audio and ephys data in
 HDF5 containers.

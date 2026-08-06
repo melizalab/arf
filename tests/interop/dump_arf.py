@@ -1,4 +1,6 @@
 # -*- mode: python -*-
+# Copyright (C) 2026 C Daniel Meliza
+# SPDX-License-Identifier: BSD-3-Clause
 """Emit a canonical text description of an ARF file's structure.
 
 Used to pin file layout: dtypes, shapes, chunking, filters, attribute types,

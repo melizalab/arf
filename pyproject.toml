@@ -14,12 +14,12 @@ authors = [
 maintainers = [
     {name = "Dan Meliza", email = "dan@meliza.org"},
 ]
-license = {text = "BSD 3-Clause License"}
+license = "BSD-3-Clause"
+license-files = ["COPYING"]
 keywords = ["neuroscience", "data format"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: BSD License",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -94,4 +94,4 @@ check_untyped_defs = true
 [tool.hatch.build]
 include = ["arf.py"]
 exclude = ["*test*"]
-artifacts = ["README.rst"]
+artifacts = ["/README.rst"]

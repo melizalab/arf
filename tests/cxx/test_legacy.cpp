@@ -7,6 +7,9 @@
  * bulk round trip: many entries, each carrying attributes, a converted sampled
  * dataset, a packet table, and a table of compound records, written in one
  * order and read back in another.
+ *
+ * Copyright (C) 2026 C Daniel Meliza <dan||meliza.org>
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <cstdio>

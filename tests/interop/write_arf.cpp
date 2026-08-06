@@ -7,6 +7,9 @@
  * entry, which the dump script redacts.
  *
  *     write_arf <path>
+ *
+ * Copyright (C) 2026 C Daniel Meliza <dan||meliza.org>
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <cstdio>

@@ -1,5 +1,8 @@
 # arf C++ build and test driver.
 #
+# Copyright (C) 2026 C Daniel Meliza
+# SPDX-License-Identifier: BSD-3-Clause
+#
 # The library is header-only; everything built here is a test.
 #
 #   make test              build and run the doctest suite (VARIANT=plain)

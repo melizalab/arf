@@ -1,6 +1,8 @@
 /* @(#)hdf5.hpp
  * @brief C++ arf interface: hdf5 C header plus some exceptions, etc
  *
+ * Copyright (C) 2011-2026 C Daniel Meliza <dan||meliza.org>
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #ifndef ARF_HDF5_HPP

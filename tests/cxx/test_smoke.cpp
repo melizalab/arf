@@ -1,6 +1,8 @@
 /* @file test_smoke.cpp
  * @brief Minimal end-to-end checks that the build and headers are sound.
  *
+ * Copyright (C) 2026 C Daniel Meliza <dan||meliza.org>
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include "doctest.h"

@@ -6,6 +6,9 @@
  * supplies those, but pulls in 456 headers to do it and roughly quadruples the
  * compile time of any translation unit that includes arf.hpp. Everything here
  * fits in one header with no dependency beyond the standard library.
+ *
+ * Copyright (C) 2026 C Daniel Meliza <dan||meliza.org>
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #ifndef ARF_UUID_HPP

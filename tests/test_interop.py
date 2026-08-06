@@ -1,4 +1,6 @@
 # -*- mode: python -*-
+# Copyright (C) 2026 C Daniel Meliza
+# SPDX-License-Identifier: BSD-3-Clause
 """Cross-implementation characterization tests.
 
 Interop is the whole point of ARF, so these are the highest-value
