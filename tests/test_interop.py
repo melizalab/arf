@@ -175,24 +175,25 @@ def test_cxx_reads_python_file(py_file):
 
 
 @requires_cxx
-def test_cxx_units_are_bytes_and_defeat_classification(cxx_file):
-    """CHARACTERIZATION: is_time_series misreads C++ discrete event data.
+def test_cxx_bytes_units_classify_correctly(cxx_file):
+    """C++ discrete event data is recognized as event data.
 
     The C++ library stores strings as fixed-length, so h5py hands their values
-    back as bytes; arf.py stores them as variable-length, which come back as
-    str. is_time_series tests `units not in ("s", "samples")` -- a str
-    comparison -- so b"samples" never matches. A spike train on a discrete
-    timebase, which the spec requires to carry both units="samples" and a
-    sampling_rate, is therefore classified as sampled data when it came from
-    C++ and correctly when it came from arf.py.
+    back as bytes, while arf.py's variable-length strings come back as str.
+    is_time_series tests `units not in ("s", "samples")`, which never matched
+    b"samples", so a spike train on a discrete timebase -- which the spec
+    requires to carry both units="samples" and a sampling_rate -- was read as
+    sampled data. The comparison now normalizes first.
     """
     with h5py.File(cxx_file, "r") as fp:
         discrete = fp["entry_000"]["spike_samples"]
-        assert discrete.attrs["units"] == b"samples"
         assert isinstance(discrete.attrs["units"], bytes)
         assert discrete.attrs["sampling_rate"] == 20000
-        # wrong: this is event data, not a time series
-        assert arf.is_time_series(discrete)
+        assert not arf.is_time_series(discrete)
+        assert not arf.is_marked_pointproc(discrete)
+
+        # and the sampled dataset next to it is still a time series
+        assert arf.is_time_series(fp["entry_000"]["pcm"])
 
 
 def test_python_units_are_str(py_file):

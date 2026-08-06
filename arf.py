@@ -442,12 +442,27 @@ def count_children(obj: h5.HLObject, type=None) -> int:
         return sum(1 for x in obj if obj.get(x, getclass=True) is type)
 
 
+def _decode_attribute(value):
+    """Normalize a string attribute for comparison.
+
+    The specification permits either storage for a string attribute, and the
+    implementations differ: this library writes variable-length strings, which
+    h5py returns as str, while the C++ library writes fixed-length ones, which
+    come back as bytes. Comparisons have to normalize first or they silently
+    fail against files from another writer.
+
+    """
+    if isinstance(value, bytes):
+        return value.decode("utf-8", "replace")
+    return value
+
+
 def is_time_series(dset: h5.Dataset) -> bool:
     """Return True if dset is a sampled time series (units are not time)"""
     return (
         not is_marked_pointproc(dset)
         and "sampling_rate" in dset.attrs
-        and dset.attrs.get("units", None) not in ("s", "samples")
+        and _decode_attribute(dset.attrs.get("units", None)) not in ("s", "samples")
     )
 
 

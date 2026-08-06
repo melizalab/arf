@@ -105,15 +105,45 @@ public:
 		h5e::check_error(H5Aread(_self, type.hid(), &out[0]));
 	}
 
+	/**
+	 * Read a string attribute, whatever its storage.
+	 *
+	 * Three forms turn up in arf files and all of them must work:
+	 * variable-length, which is what arf.py writes for most attributes;
+	 * fixed-length with no terminator, which is what arf.py writes for a
+	 * uuid; and fixed-length with one, which is what this library writes.
+	 */
 	void read(std::string & str) {
 		// the wrapper owns the handle, so it is released on the throw
 		// path as well as the success path
 		h5t::datatype type(h5e::check_error(H5Aget_type(_self)));
 		if (H5Tget_class(type.hid())!=H5T_STRING)
 			throw Exception("Attempt to read non-string attribute into string");
-		boost::scoped_array<char> buf(new char[type.size()]);
+
+		if (H5Tis_variable_str(type.hid()) > 0) {
+			// hdf5 allocates the characters and hands us the pointer
+			char * buf = 0;
+			herr_t rc = H5Aread(_self, type.hid(), &buf);
+			if (buf) {
+				str.assign(buf);
+				H5free_memory(buf);
+			}
+			else {
+				str.clear();
+			}
+			h5e::check_error(rc);
+			return;
+		}
+
+		std::size_t size = type.size();
+		boost::scoped_array<char> buf(new char[size]);
 		h5e::check_error(H5Aread(_self, type.hid(), buf.get()));
-		str.assign(buf.get());
+		// take everything up to the first NUL, or the whole buffer if
+		// there isn't one. Scanning for a terminator that may not be
+		// there would read past the end.
+		std::size_t len = 0;
+		while (len < size && buf[len] != '\0') ++len;
+		str.assign(buf.get(), len);
 	}
 
 	/** Return the attributes's dataspace */

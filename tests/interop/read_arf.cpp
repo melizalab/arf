@@ -91,28 +91,35 @@ main(int argc, char ** argv)
                               "spikes should hold 16 times");
                 }
 
-                // --- strings, which do not ---
+                // --- strings, which arf.py stores as variable-length ---
 
-                // CHARACTERIZATION: known bug. arf.py writes string attributes
-                // as variable-length; attribute::read(std::string&) assumes
-                // fixed-length, allocating H5Tget_size() bytes -- 8, the size
-                // of a pointer -- and then reading the returned char* as if the
-                // buffer held the characters themselves. Every string attribute
-                // arf.py writes is therefore unreadable here, including units,
-                // which the specification requires on every dataset. Reading
-                // the C++ library's own files works, because it writes
-                // fixed-length strings.
-                check(f.read_attribute<std::string>("arf_library") != "python",
-                      "CHARACTERIZATION: root arf_library unexpectedly readable "
-                      "-- vlen string attributes may have been fixed");
+                // These were unreadable until the reader learned to handle
+                // variable-length strings: it assumed fixed-length, allocating
+                // H5Tget_size() bytes -- 8, the size of a pointer -- and then
+                // read the returned char* as if the buffer held the characters.
+                // units is required on every dataset by the specification, so
+                // this made arf.py's files largely uninterpretable here.
+                check(f.read_attribute<std::string>("arf_library") == "python",
+                      "root arf_library should say python");
+                check(f.read_attribute<std::string>("arf_version").size() > 0,
+                      "root arf_version should be readable");
                 arf::entry first(f, children[0]);
-                check(first.read_attribute<std::string>("animal") != "bird_042",
-                      "CHARACTERIZATION: entry animal unexpectedly readable "
-                      "-- vlen string attributes may have been fixed");
+                check(first.read_attribute<std::string>("animal") == "bird_042",
+                      "entry animal should be readable");
+                check(first.read_attribute<std::string>("experimenter") == "dmeliza",
+                      "entry experimenter should be readable");
                 arf::h5d::dataset pcm(first.hid(), "pcm");
-                check(pcm.read_attribute<std::string>("units") != "mV",
-                      "CHARACTERIZATION: pcm units unexpectedly readable "
-                      "-- vlen string attributes may have been fixed");
+                check(pcm.read_attribute<std::string>("units") == "mV",
+                      "pcm units should be readable");
+                arf::h5d::dataset spikes_units(first.hid(), "spikes");
+                check(spikes_units.read_attribute<std::string>("units") == "s",
+                      "spike units should be readable");
+
+                // the uuid is fixed-length and exactly 36 bytes, with no room
+                // for a terminator -- the case that used to read past the end
+                check(first.has_attribute("uuid"), "entry needs a uuid");
+                check(first.read_attribute<std::string>("uuid").size() == 36,
+                      "uuid should read back as 36 characters");
         }
         catch (arf::Exception const & err) {
                 std::fprintf(stderr, "FAIL: threw arf::Exception: %s\n", err.what());

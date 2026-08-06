@@ -72,6 +72,52 @@ TEST_CASE("string attributes round trip") {
         CHECK(node.read_attribute<std::string>("what") == "a c string");
 }
 
+TEST_CASE("string attributes are readable whatever their storage") {
+        // arf files contain all three forms, and the C++ library used to be
+        // able to read only the last one -- so units, which the spec requires
+        // on every dataset, was unreadable in any file arf.py wrote.
+        arftest::handle_guard guard;
+        arftest::scratch_file scratch("a_storage");
+        file f(scratch.path, "w");
+        group node(f, "entry", true);
+
+        SUBCASE("variable-length, as arf.py writes most attributes") {
+                hid_t type = H5Tcopy(H5T_C_S1);
+                H5Tset_size(type, H5T_VARIABLE);
+                H5Tset_cset(type, H5T_CSET_UTF8);
+                hid_t space = H5Screate(H5S_SCALAR);
+                hid_t attr = H5Acreate2(node.hid(), "vlen", type, space,
+                                        H5P_DEFAULT, H5P_DEFAULT);
+                char const * value = "variable length";
+                REQUIRE(H5Awrite(attr, type, &value) >= 0);
+                H5Aclose(attr);
+                H5Sclose(space);
+                H5Tclose(type);
+
+                CHECK(node.read_attribute<std::string>("vlen") == "variable length");
+        }
+
+        SUBCASE("fixed-length with no terminator, as arf.py writes a uuid") {
+                char const * value = "0123456789abcdef";
+                hid_t type = H5Tcopy(H5T_C_S1);
+                H5Tset_size(type, 16);  // exactly the characters, no room for a NUL
+                hid_t space = H5Screate(H5S_SCALAR);
+                hid_t attr = H5Acreate2(node.hid(), "exact", type, space,
+                                        H5P_DEFAULT, H5P_DEFAULT);
+                REQUIRE(H5Awrite(attr, type, value) >= 0);
+                H5Aclose(attr);
+                H5Sclose(space);
+                H5Tclose(type);
+
+                CHECK(node.read_attribute<std::string>("exact") == "0123456789abcdef");
+        }
+
+        SUBCASE("fixed-length with a terminator, as this library writes") {
+                node.write_attribute("own", "written here");
+                CHECK(node.read_attribute<std::string>("own") == "written here");
+        }
+}
+
 TEST_CASE("writing again replaces the value") {
         arftest::handle_guard guard;
         arftest::scratch_file scratch("a_overwrite");

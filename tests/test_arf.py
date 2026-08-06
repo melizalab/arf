@@ -277,3 +277,35 @@ def test_timestamp_conversion():
 
 # # Variables:
 # # End:
+
+
+def test_units_stored_as_bytes(tmp_entry):
+    """Fixed-length string attributes come back from h5py as bytes.
+
+    That is what the C++ library writes, so classification has to cope with it.
+    A discrete-timebase point process carries units of "samples" and a
+    sampling_rate, which is exactly the combination that used to be misread as
+    sampled data.
+    """
+    dset = arf.create_dataset(
+        tmp_entry,
+        "spikes",
+        randint(0, 1000, 100),
+        units="samples",
+        sampling_rate=1000,
+        datatype=arf.DataTypes.SPIKET,
+    )
+    dset.attrs.create("units", b"samples", dtype="|S7")
+    assert isinstance(dset.attrs["units"], bytes)
+    assert not arf.is_time_series(dset)
+
+    sampled = arf.create_dataset(
+        tmp_entry,
+        "pcm",
+        randn(100),
+        units="mV",
+        sampling_rate=1000,
+        datatype=arf.DataTypes.ACOUSTIC,
+    )
+    sampled.attrs.create("units", b"mV", dtype="|S3")
+    assert arf.is_time_series(sampled)
