@@ -80,9 +80,9 @@ main(int argc, char ** argv)
                         std::vector<double> pcm;
                         for (int j = 0; j < nsamples; ++j)
                                 pcm.push_back(j * 0.5 + i);
-                        arf::dataset_ptr sampled =
+                        arf::h5d::dataset sampled =
                                 e.create_dataset("pcm", pcm, "mV", arf::ACOUSTIC);
-                        sampled->write_attribute("sampling_rate", 20000);
+                        sampled.write_attribute("sampling_rate", 20000);
 
                         // simple event data: times in seconds
                         std::vector<double> spikes;
@@ -95,10 +95,10 @@ main(int argc, char ** argv)
                         std::vector<boost::int32_t> ticks;
                         for (int j = 0; j < nspikes; ++j)
                                 ticks.push_back(j * 200 + i);
-                        arf::dataset_ptr discrete =
+                        arf::h5d::dataset discrete =
                                 e.create_dataset("spike_samples", ticks, "samples",
                                                  arf::SPIKET);
-                        discrete->write_attribute("sampling_rate", 20000);
+                        discrete.write_attribute("sampling_rate", 20000);
 
                         // complex event data: compound records with a start
                         // field. The spec wants one unit per field, in field
@@ -107,7 +107,7 @@ main(int argc, char ** argv)
                         interval_units.push_back("");
                         interval_units.push_back("ms");
                         interval_units.push_back("ms");
-                        arf::packet_table_ptr intervals =
+                        arf::h5pt::packet_table intervals =
                                 e.create_packet_table<interval>("intervals", interval_units,
                                                                 arf::STIMI);
                         for (int j = 0; j < nintervals; ++j) {
@@ -116,7 +116,7 @@ main(int argc, char ** argv)
                                 std::sprintf(record.name, "stim_%02d", j);
                                 record.start = 100 * j;
                                 record.stop = 100 * j + 50;
-                                intervals->write(&record, 1);
+                                intervals.write(&record, 1);
                         }
                 }
         }

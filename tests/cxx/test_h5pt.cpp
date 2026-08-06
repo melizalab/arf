@@ -50,12 +50,12 @@ TEST_CASE("a packet table appends across many writes") {
         file f(scratch.path, "w");
         group entry(f, "entry", true);
 
-        arf::packet_table_ptr pt = entry.create_packet_table<float>("stream");
-        CHECK(pt->dataspace()->size() == 0);
+        arf::h5pt::packet_table pt = entry.create_packet_table<float>("stream");
+        CHECK(pt.dataspace().size() == 0);
 
         std::vector<float> packet(128, 1.5f);
-        for (int i = 0; i < 5; ++i) pt->write(packet);
-        CHECK(pt->dataspace()->size() == 5 * 128);
+        for (int i = 0; i < 5; ++i) pt.write(packet);
+        CHECK(pt.dataspace().size() == 5 * 128);
 }
 
 TEST_CASE("packets can be written from a bare pointer") {
@@ -64,13 +64,13 @@ TEST_CASE("packets can be written from a bare pointer") {
         file f(scratch.path, "w");
         group entry(f, "entry", true);
 
-        arf::packet_table_ptr pt = entry.create_packet_table<boost::uint32_t>("stream");
+        arf::h5pt::packet_table pt = entry.create_packet_table<boost::uint32_t>("stream");
         boost::uint32_t values[4] = { 10, 20, 30, 40 };
-        pt->write(values, 4);
-        CHECK(pt->dataspace()->size() == 4);
+        pt.write(values, 4);
+        CHECK(pt.dataspace().size() == 4);
 
         std::vector<boost::uint32_t> read;
-        pt->read(read);
+        pt.read(read);
         REQUIRE(read.size() == 4);
         CHECK(read[0] == 10);
         CHECK(read[3] == 40);
@@ -84,13 +84,13 @@ TEST_CASE("data written as packets reads back through the dataset interface") {
 
         std::vector<float> packet;
         for (int i = 0; i < 64; ++i) packet.push_back(i * 0.5f);
-        arf::packet_table_ptr pt = entry.create_packet_table<float>("stream");
-        pt->write(packet);
-        pt->write(packet);
+        arf::h5pt::packet_table pt = entry.create_packet_table<float>("stream");
+        pt.write(packet);
+        pt.write(packet);
 
         SUBCASE("whole") {
                 std::vector<float> read;
-                pt->read(read);
+                pt.read(read);
                 REQUIRE(read.size() == 128);
                 CHECK(read[0] == packet[0]);
                 CHECK(read[64] == packet[0]);
@@ -108,19 +108,19 @@ TEST_CASE("compound records round trip") {
         file f(scratch.path, "w");
         group entry(f, "entry", true);
 
-        arf::packet_table_ptr pt = entry.create_packet_table<interval>("intervals");
+        arf::h5pt::packet_table pt = entry.create_packet_table<interval>("intervals");
         for (int i = 0; i < 3; ++i) {
                 interval record;
                 std::memset(&record, 0, sizeof(record));
                 std::sprintf(record.name, "label_%03d", i);
                 record.start = 100 * i;
                 record.stop = 100 * i + 50;
-                pt->write(&record, 1);
+                pt.write(&record, 1);
         }
-        REQUIRE(pt->dataspace()->size() == 3);
+        REQUIRE(pt.dataspace().size() == 3);
 
         std::vector<interval> read(3);
-        pt->read(&read[0], 3);
+        pt.read(&read[0], 3);
         CHECK(std::string(read[0].name) == "label_000");
         CHECK(read[2].start == 200);
         CHECK(read[2].stop == 250);
@@ -132,9 +132,9 @@ TEST_CASE("chunk size is configurable") {
         file f(scratch.path, "w");
         group entry(f, "entry", true);
 
-        arf::packet_table_ptr pt =
+        arf::h5pt::packet_table pt =
                 entry.create_packet_table<float>("stream", false, 256);
-        CHECK(pt->chunks() == std::vector<hsize_t>(1, 256));
+        CHECK(pt.chunks() == std::vector<hsize_t>(1, 256));
 }
 
 TEST_CASE("replace drops an existing table") {
@@ -144,13 +144,13 @@ TEST_CASE("replace drops an existing table") {
         group entry(f, "entry", true);
 
         {
-                arf::packet_table_ptr first = entry.create_packet_table<float>("stream");
-                first->write(std::vector<float>(32, 1.0f));
-                CHECK(first->dataspace()->size() == 32);
+                arf::h5pt::packet_table first = entry.create_packet_table<float>("stream");
+                first.write(std::vector<float>(32, 1.0f));
+                CHECK(first.dataspace().size() == 32);
         }
-        arf::packet_table_ptr second =
+        arf::h5pt::packet_table second =
                 entry.create_packet_table<float>("stream", true);
-        CHECK(second->dataspace()->size() == 0);
+        CHECK(second.dataspace().size() == 0);
 }
 
 TEST_CASE("packet tables release both of their handles") {
@@ -165,8 +165,8 @@ TEST_CASE("packet tables release both of their handles") {
 
         ssize_t before = arftest::handle_guard::open_handles();
         {
-                arf::packet_table_ptr pt = entry.create_packet_table<float>("stream");
-                pt->write(std::vector<float>(8, 1.0f));
+                arf::h5pt::packet_table pt = entry.create_packet_table<float>("stream");
+                pt.write(std::vector<float>(8, 1.0f));
         }
         CHECK(arftest::handle_guard::open_handles() == before);
 }
@@ -182,13 +182,13 @@ TEST_CASE("creating over an existing table without replace throws") {
         file f(scratch.path, "w");
         group entry(f, "entry", true);
 
-        arf::packet_table_ptr first = entry.create_packet_table<float>("stream");
-        first->write(std::vector<float>(32, 1.0f));
-        REQUIRE(first->dataspace()->size() == 32);
+        arf::h5pt::packet_table first = entry.create_packet_table<float>("stream");
+        first.write(std::vector<float>(32, 1.0f));
+        REQUIRE(first.dataspace().size() == 32);
 
         CHECK_THROWS_AS(entry.create_packet_table<float>("stream"), arf::Exception);
         // and the original is intact
-        CHECK(first->dataspace()->size() == 32);
+        CHECK(first.dataspace().size() == 32);
 }
 
 TEST_CASE("an existing table can be reopened") {
@@ -197,14 +197,14 @@ TEST_CASE("an existing table can be reopened") {
         file f(scratch.path, "w");
         {
                 group entry(f, "entry", true);
-                arf::packet_table_ptr pt = entry.create_packet_table<float>("stream");
-                pt->write(std::vector<float>(16, 2.0f));
+                arf::h5pt::packet_table pt = entry.create_packet_table<float>("stream");
+                pt.write(std::vector<float>(16, 2.0f));
         }
         group entry(f, "entry");
         arf::h5pt::packet_table reopened(entry.hid(), "stream");
-        CHECK(reopened.dataspace()->size() == 16);
+        CHECK(reopened.dataspace().size() == 16);
         reopened.write(std::vector<float>(16, 3.0f));
-        CHECK(reopened.dataspace()->size() == 32);
+        CHECK(reopened.dataspace().size() == 32);
 }
 
 }

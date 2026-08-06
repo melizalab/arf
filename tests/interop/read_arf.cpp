@@ -71,7 +71,7 @@ main(int argc, char ** argv)
 
                         check(e.contains("pcm"), "entry should contain pcm");
                         arf::h5d::dataset pcm(e.hid(), "pcm");
-                        check(pcm.dataspace()->size() == 128,
+                        check(pcm.dataspace().size() == 128,
                               "pcm should hold 128 samples");
                         check(pcm.read_attribute<int>("datatype") == arf::ACOUSTIC,
                               "pcm datatype should be ACOUSTIC");
@@ -88,7 +88,7 @@ main(int argc, char ** argv)
 
                         check(e.contains("spikes"), "entry should contain spikes");
                         arf::h5d::dataset spikes(e.hid(), "spikes");
-                        check(spikes.dataspace()->size() == 16,
+                        check(spikes.dataspace().size() == 16,
                               "spikes should hold 16 times");
                 }
 

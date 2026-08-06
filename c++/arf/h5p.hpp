@@ -12,49 +12,44 @@
 #ifndef _H5P_H
 #define _H5P_H 1
 
+#include <algorithm>
 #include <hdf5.h>
-#include <boost/noncopyable.hpp>
+#include "hdf5.hpp"
 #include "h5e.hpp"
 
 namespace arf { namespace h5p {
 
-class proplist : boost::noncopyable {
+/**
+ * A property list. Value-like, as datatypes and dataspaces are: copying
+ * duplicates the list with H5Pcopy.
+ */
+class proplist : public handle {
 
 public:
-	typedef boost::shared_ptr<proplist> ptr_type;
+        /** Create a new property list of the given class */
+        explicit proplist(hid_t cls_id) : handle(h5e::check_error(H5Pcreate(cls_id))) {}
 
-	/** Create a new property list */
-	proplist(hid_t cls_id) {
-		_self = h5e::check_error(H5Pcreate(cls_id));
-	}
+        proplist(proplist const & other)
+                : handle(h5e::check_error(H5Pcopy(other.hid()))) {}
 
-        proplist(proplist const & other) {
-                _self = h5e::check_error(H5Pcopy(other.hid()));
-        };
+        proplist(proplist && other) = default;
 
-        proplist & operator= (proplist const & other) {
-                H5Pclose(_self);
-                _self = h5e::check_error(H5Pcopy(other.hid()));
+        /** Copy-and-swap; see the note on h5t::datatype::operator=. */
+        proplist & operator= (proplist other) {
+                swap(other);
                 return *this;
         }
 
-	~proplist() {
-		H5Pclose(_self);
-	}
+        void swap(proplist & other) { std::swap(_self, other._self); }
 
-	bool operator==(proplist const & other) const {
-		return h5e::check_error(H5Tequal(_self, other.hid()) > 0);
-	}
-	bool operator!=(proplist const & other) const {
-		return h5e::check_error(H5Tequal(_self, other.hid()) <= 0);
-	}
-
-	hid_t hid() const { return _self; }
-protected:
-	hid_t _self;
+        bool operator==(proplist const & other) const {
+                return h5e::check_error(H5Pequal(_self, other.hid())) > 0;
+        }
+        bool operator!=(proplist const & other) const {
+                return h5e::check_error(H5Pequal(_self, other.hid())) <= 0;
+        }
 };
 
 }}
 
 #endif /* _H5P_H */
-

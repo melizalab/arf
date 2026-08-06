@@ -12,6 +12,7 @@
 #ifndef _H5G_H
 #define _H5G_H 1
 
+#include <type_traits>
 #include "hdf5.hpp"
 #include "h5p.hpp"
 #include "h5a.hpp"
@@ -26,7 +27,7 @@ struct name_iterator {
 
 	typedef std::vector<std::string> return_value;
 	return_value value;
-	static herr_t iterate(hid_t id, const char * name, const H5L_info_t *link_info, void *data) {
+	static herr_t iterate(hid_t, const char * name, const H5L_info_t *, void *data) {
 		name_iterator *_this = static_cast<name_iterator*>(data);
 		_this->value.push_back(std::string(name));
 		return 0;
@@ -42,8 +43,6 @@ struct name_iterator {
 class group : public h5a::node {
 
 public:
-	typedef boost::shared_ptr<group> ptr_type;
-
 	/** Open or create a group object by name */
 	group(h5a::node const & parent, std::string const & path) {
 		open_group(parent, path);
@@ -59,13 +58,11 @@ public:
 							    H5P_CRT_ORDER_TRACKED | H5P_CRT_ORDER_INDEXED));
 		_self = h5e::check_error(H5Gcreate2(parent.hid(), path.c_str(), H5P_DEFAULT,
 						   gcpl.hid(), H5P_DEFAULT));
+		// _self was default-constructed invalid, so nothing leaked above
 	}
 
-	~group() {
-                if (H5Iis_valid(_self) > 0) {
-                        H5Gclose(_self);
-                }
-	}
+	group(group && other) = default;
+	group & operator=(group && other) = default;
 
 	/**
 	 * Create a new dataset and add data to it.  Currently only 1D
@@ -78,29 +75,22 @@ public:
 	 *        about 16 bytes a chunk and gives every chunk an adler32.
 	 *        1 through 9 compress; a negative value writes no filter.
 	 */
-	template <typename StorageType, typename MemType>
-	h5d::dataset::ptr_type
+	template <typename StorageType = void, typename MemType>
+	h5d::dataset
 	create_dataset(std::string const & name,
 		       std::vector<MemType> const & data,
 		       int compression=0) {
+		typedef typename std::conditional<std::is_same<StorageType, void>::value,
+						  MemType, StorageType>::type storage_type;
 		if (H5Lexists(_self, name.c_str(), H5P_DEFAULT) > 0)
 			throw Exception("Object already exists with that name");
 
-		h5t::wrapper<StorageType> t;
+		h5t::wrapper<storage_type> t;
 		h5t::datatype type(t);
 		h5s::dataspace dspace(std::vector<hsize_t>(1,data.size()), std::vector<hsize_t>(1,H5S_UNLIMITED));
-		h5d::dataset::ptr_type ds = boost::make_shared<h5d::dataset>(_self, name.c_str(), dspace,
-									     type, compression);
-		ds->write(data);
+		h5d::dataset ds(_self, name.c_str(), dspace, type, compression);
+		ds.write(data);
 		return ds;
-	}
-
-	template <typename Type>
-	boost::shared_ptr<h5d::dataset>
-	create_dataset(std::string const & name,
-		       std::vector<Type> const & data,
-		       int compression=0) {
-		return create_dataset<Type,Type>(name,data,compression);
 	}
 
 	/**
@@ -113,7 +103,7 @@ public:
 	 * @param compression integer code indicating compression ratio
 	 */
 	template <typename StorageType>
-	typename h5pt::packet_table::ptr_type
+	h5pt::packet_table
 	create_packet_table(std::string const & name,
 			    bool replace=false,
 			    hsize_t chunk_size=1024,
@@ -132,10 +122,7 @@ public:
 
                 // H5PTcreate_fl uses the same convention as create_dataset:
                 // -1 for no filter, 0 through 9 for a deflate level
-                h5pt::packet_table::ptr_type pt =
-                        boost::make_shared<h5pt::packet_table>(_self, name, type, chunk_size,
-                                                               compression);
-		return pt;
+                return h5pt::packet_table(_self, name, type, chunk_size, compression);
 	}
 
 
@@ -155,7 +142,7 @@ public:
 		// count and stride in offset, so the defaults asked for zero
 		// elements starting at index one, and nothing was ever read.
 		h5d::dataset dset(_self, name);
-		hsize_t available = dset.dataspace()->size();
+		hsize_t available = dset.dataspace().size();
 		hsize_t count = 0;
 		if (stride > 0 && offset < available)
 			count = (available - offset + stride - 1) / stride;
@@ -216,7 +203,7 @@ public:
 
 
 protected:
-	group(hid_t group_id=-1) {_self = group_id;}
+	explicit group(hid_t group_id = H5I_INVALID_HID) : h5a::node(group_id) {}
 
 private:
 	void open_group(h5a::node const & parent, std::string const & path) {

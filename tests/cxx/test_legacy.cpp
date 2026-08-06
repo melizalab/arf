@@ -101,18 +101,18 @@ TEST_CASE("a file of many entries round trips") {
 
                         // stored as double though held as float, which is also
                         // what keeps this call out of the ambiguity in item C
-                        arf::dataset_ptr d =
+                        arf::h5d::dataset d =
                                 e.create_dataset<double>("dataset", data, "mV",
                                                          arf::ACOUSTIC);
-                        d->write_attribute("sampling_rate", 1000);
+                        d.write_attribute("sampling_rate", 1000);
 
-                        arf::packet_table_ptr pt =
+                        arf::h5pt::packet_table pt =
                                 e.create_packet_table<float>("apackettable", "mV",
                                                              arf::ACOUSTIC);
-                        pt->write_attribute("sampling_rate", 1000);
-                        for (int p = 0; p < npackets; ++p) pt->write(data);
+                        pt.write_attribute("sampling_rate", 1000);
+                        for (int p = 0; p < npackets; ++p) pt.write(data);
 
-                        arf::packet_table_ptr intervals =
+                        arf::h5pt::packet_table intervals =
                                 e.create_packet_table<interval>("intervals", "ms",
                                                                 arf::STIMI);
                         for (int p = 0; p < npackets; ++p) {
@@ -121,7 +121,7 @@ TEST_CASE("a file of many entries round trips") {
                                 std::sprintf(record.name, "label_%03d", p);
                                 record.start = 100 * p;
                                 record.stop = 100 * p + 123;
-                                intervals->write(&record, 1);
+                                intervals.write(&record, 1);
                         }
                 }
                 CHECK(f.nchildren() == static_cast<hsize_t>(nentries));

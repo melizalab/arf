@@ -12,7 +12,6 @@
 #ifndef _H5A_H
 #define _H5A_H 1
 
-#include <boost/scoped_array.hpp>
 #include <algorithm>
 #include <cstring>
 #include <vector>
@@ -29,13 +28,11 @@ class attribute : public handle {
 
 public:
 	/** Open an existing attribute */
-	attribute(hid_t parent, std::string const & name) {
-		_self = h5e::check_error(H5Aopen(parent, name.c_str(), H5P_DEFAULT));
-	}
+	attribute(hid_t parent, std::string const & name)
+		: handle(h5e::check_error(H5Aopen(parent, name.c_str(), H5P_DEFAULT))) {}
 
-        attribute(handle const & parent, std::string const & name) {
-                _self = h5e::check_error(H5Aopen(parent.hid(), name.c_str(), H5P_DEFAULT));
-        }
+        attribute(handle const & parent, std::string const & name)
+                : handle(h5e::check_error(H5Aopen(parent.hid(), name.c_str(), H5P_DEFAULT))) {}
 
 	/** Open an existing attribute or create a new attribute */
 	attribute(hid_t parent, std::string const & name,
@@ -50,9 +47,8 @@ public:
 		}
 	}
 
-	~attribute() {
-		H5Aclose(_self);
-	}
+	attribute(attribute && other) = default;
+	attribute & operator=(attribute && other) = default;
 
 	/** assign value to attribute. automatic type conversion */
 	template <typename Type>
@@ -70,7 +66,7 @@ public:
 		// buffer of any other length is a mistake: a shorter one gets
 		// read past its end. This used to be an assert, which said
 		// nothing at all in a release build.
-		if (dataspace()->size() != static_cast<hsize_t>(size))
+		if (dataspace().size() != static_cast<hsize_t>(size))
 			throw Exception("attribute write size does not match its extent");
 		h5e::check_error(H5Awrite(_self, type.hid(), arr));
 	}
@@ -131,7 +127,7 @@ public:
 	void read(std::vector<Type> & out) {
 		h5t::wrapper<Type> t;
 		h5t::datatype type(t);
-                out.resize(dataspace()->size());
+                out.resize(dataspace().size());
 		h5e::check_error(H5Aread(_self, type.hid(), out.data()));
 	}
 
@@ -166,27 +162,28 @@ public:
 		}
 
 		std::size_t size = type.size();
-		boost::scoped_array<char> buf(new char[size]);
-		h5e::check_error(H5Aread(_self, type.hid(), buf.get()));
+		std::vector<char> buf(size, '\0');
+		h5e::check_error(H5Aread(_self, type.hid(), buf.data()));
 		// take everything up to the first NUL, or the whole buffer if
 		// there isn't one. Scanning for a terminator that may not be
 		// there would read past the end.
 		std::size_t len = 0;
 		while (len < size && buf[len] != '\0') ++len;
-		str.assign(buf.get(), len);
+		str.assign(buf.data(), len);
 	}
 
-	/** Return the attributes's dataspace */
-	h5s::dataspace::ptr_type dataspace() const {
-		return boost::make_shared<h5s::dataspace>(h5e::check_error(H5Aget_space(_self)));
+	/** Return the attribute's dataspace */
+	h5s::dataspace dataspace() const {
+		return h5s::dataspace(h5e::check_error(H5Aget_space(_self)));
 	}
 
 	/** Return the name of the attribute */
 	std::string name() const {
 		ssize_t sz = H5Aget_name(_self, 0, 0);
-		char name[sz+1];
-		H5Aget_name(_self, sz+1, name);
-		return name;
+		if (sz <= 0) return std::string();
+		std::vector<char> buf(sz + 1, '\0');
+		H5Aget_name(_self, buf.size(), buf.data());
+		return std::string(buf.data());
 	}
 
 private:
@@ -198,6 +195,10 @@ private:
 class node : public handle {
 
 public:
+
+	node(node && other) = default;
+	node & operator=(node && other) = default;
+
 
         /** Determine whether an attribute with a given name exists on the object */
         bool has_attribute(std::string const & name) {
@@ -347,6 +348,8 @@ public:
 			h5e::check_error(H5Adelete(_self, name.c_str()));
 	}
 
+protected:
+	explicit node(hid_t hid = H5I_INVALID_HID) : handle(hid) {}
 };
 
 } // namespace h5a

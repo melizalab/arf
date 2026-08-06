@@ -7,7 +7,7 @@
 #                          not depend on assert() for its checks)
 #   make test-sanitize     same, under AddressSanitizer + UBSan
 #   make test-all          all three
-#   make lint-strict       informational -Wpedantic -Werror syntax check
+#   make lint-strict       -Wpedantic -Werror syntax check
 #   make install           install the headers under $(PREFIX)
 #
 # Objects go to build/$(VARIANT)/. Sanitizers require a glibc target.
@@ -15,7 +15,7 @@
 PREFIX     ?= /usr/local
 CXX        ?= g++
 CXXSTD     ?= -std=c++11
-WARN       ?= -Wall -Wextra
+WARN       ?= -Wall -Wextra -Wpedantic -Werror
 PKG_CONFIG ?= pkg-config
 
 # Debian and Ubuntu ship the serial build as hdf5-serial.pc, with headers under
@@ -150,9 +150,9 @@ check-sanitizers:
 
 # --- checks and housekeeping ----------------------------------------------
 
-# Expected to fail until the phase 5 backlog is cleared: the headers still have
-# VLAs and unused parameters. Nothing depends on this target, and its CI job is
-# continue-on-error, so a non-zero exit here is a report rather than a blocker.
+# The ordinary build already compiles with -Wpedantic -Werror. This target keeps
+# the strict flags explicit and independent of WARN, so it still means something
+# if someone loosens the default.
 lint-strict:
 	$(CXX) $(CXXSTD) -Wall -Wextra -Wpedantic -Werror -fsyntax-only \
 		$(INCLUDES) $(TEST_SRCS)

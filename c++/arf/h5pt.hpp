@@ -31,8 +31,6 @@ namespace arf { namespace h5pt {
 class packet_table : public h5d::dataset {
 
 public:
-	typedef boost::shared_ptr<packet_table> ptr_type;
-
 	/** Open an existing packet table */
 	packet_table(hid_t parent, std::string const & name)
 		: h5d::dataset(parent, name) {
@@ -48,13 +46,23 @@ public:
 		open_dataset(parent, name);
 	}
 
-	~packet_table() {
-                // NB: H5PTis_valid returns herr_t, so any non-negative value
-                // means valid. It is not htri_t like H5Iis_valid, where only a
-                // positive value does.
-                if (H5PTis_valid(_ptself) >= 0) {
-                        H5PTclose(_ptself);
-                }
+	~packet_table() { close_table(); }
+
+	// H5PTclose does more than drop a reference, so this identifier is not
+	// the base's to manage and the moves are written out
+	packet_table(packet_table && other)
+		: h5d::dataset(std::move(other)), _ptself(other._ptself) {
+		other._ptself = H5I_INVALID_HID;
+	}
+
+	packet_table & operator=(packet_table && other) {
+		if (this != &other) {
+			close_table();
+			h5d::dataset::operator=(std::move(other));
+			_ptself = other._ptself;
+			other._ptself = H5I_INVALID_HID;
+		}
+		return *this;
 	}
 
 	/**
@@ -72,6 +80,13 @@ public:
 	}
 
 protected:
+	void close_table() {
+                // NB: H5PTis_valid returns herr_t, so any non-negative value
+                // means valid. It is not htri_t like H5Iis_valid, where only a
+                // positive value does.
+		if (H5PTis_valid(_ptself) >= 0) H5PTclose(_ptself);
+		_ptself = H5I_INVALID_HID;
+	}
 
 	hid_t _ptself;
 };

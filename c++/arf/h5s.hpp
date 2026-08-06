@@ -63,47 +63,34 @@ inline std::vector<hsize_t> guess_chunk(std::vector<hsize_t> const & shape, int 
  */
 class dataspace : public handle {
 public:
-	typedef boost::shared_ptr<dataspace> ptr_type;
 	/**
 	 * The default dataspace is a scalar.
 	 */
-	dataspace() {
-		_self = h5e::check_error(H5Screate(H5S_SCALAR));
-	}
-
-	dataspace(dataspace const & other) {
-		_self = h5e::check_error(H5Scopy(other.hid()));
-	}
+	/** The default dataspace is a scalar. */
+	dataspace() : handle(h5e::check_error(H5Screate(H5S_SCALAR))) {}
 
 	/** Take ownership of a dataspace handle */
 	explicit dataspace(hid_t hid) : handle(hid) {}
 
-	explicit dataspace(std::vector<hsize_t> const & dims) {
-		_self = h5e::check_error(H5Screate_simple(dims.size(), dims.data(), NULL));
-	}
-
-	dataspace & operator= (dataspace const & other) {
-		// release old handle
-		H5Sclose(_self);
-		_self = h5e::check_error(H5Scopy(other.hid()));
-		return *this;
-	}
+	explicit dataspace(std::vector<hsize_t> const & dims)
+		: handle(h5e::check_error(H5Screate_simple(dims.size(), dims.data(), NULL))) {}
 
 	dataspace(std::vector<hsize_t> const & dims,
-		  std::vector<hsize_t> const & maxdims) {
-		assert(dims.size() == maxdims.size() || maxdims.empty());
-		if(maxdims.empty())
-			_self = h5e::check_error(H5Screate_simple(dims.size(), dims.data(), NULL));
-		else
-			_self = h5e::check_error(H5Screate_simple(dims.size(), dims.data(), maxdims.data()));
+		  std::vector<hsize_t> const & maxdims)
+		: handle(h5e::check_error(
+				 H5Screate_simple(dims.size(), dims.data(),
+						  maxdims.empty() ? NULL : maxdims.data()))) {
+		if (!maxdims.empty() && dims.size() != maxdims.size())
+			throw Exception("dims and maxdims must have the same rank");
 	}
 
 	dataspace(dataspace const & orig,
 		  std::vector<hsize_t> const & offset,
 		  std::vector<hsize_t> const & stride,
-		  std::vector<hsize_t> const & count) {
-		assert((offset.size() == stride.size()) && (stride.size() == count.size()));
-		_self = h5e::check_error(H5Scopy(orig.hid()));
+		  std::vector<hsize_t> const & count)
+		: handle(h5e::check_error(H5Scopy(orig.hid()))) {
+		if (offset.size() != stride.size() || stride.size() != count.size())
+			throw Exception("hyperslab arguments must have the same rank");
 		h5e::check_error(H5Sselect_hyperslab(_self, H5S_SELECT_SET, offset.data(),
 						     stride.data(), count.data(), NULL));
 	}
@@ -112,18 +99,28 @@ public:
 		  std::vector<hsize_t> const & offset,
 		  std::vector<hsize_t> const & stride,
 		  std::vector<hsize_t> const & count,
-		  std::vector<hsize_t> const & block) {
-		assert(offset.size() == stride.size() && stride.size() == count.size() &&
-		       count.size() == block.size());
-		_self = h5e::check_error(H5Scopy(orig.hid()));
+		  std::vector<hsize_t> const & block)
+		: handle(h5e::check_error(H5Scopy(orig.hid()))) {
+		if (offset.size() != stride.size() || stride.size() != count.size() ||
+		    count.size() != block.size())
+			throw Exception("hyperslab arguments must have the same rank");
 		h5e::check_error(H5Sselect_hyperslab(_self, H5S_SELECT_SET, offset.data(),
 						     stride.data(), count.data(), block.data()));
 	}
 
-	~dataspace() {
-		H5Sclose(_self);
+	/** Copying duplicates the description with H5Scopy. */
+	dataspace(dataspace const & other)
+		: handle(h5e::check_error(H5Scopy(other.hid()))) {}
+
+	dataspace(dataspace && other) = default;
+
+	/** Copy-and-swap; see the note on h5t::datatype::operator=. */
+	dataspace & operator= (dataspace other) {
+		swap(other);
+		return *this;
 	}
 
+	void swap(dataspace & other) { std::swap(_self, other._self); }
 
 	hsize_t ndims() const {
 		return h5e::check_error(H5Sget_simple_extent_ndims(_self));

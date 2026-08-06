@@ -24,8 +24,6 @@ namespace arf { namespace h5f {
 class file : public h5g::group {
 
 public:
-	typedef boost::shared_ptr<file> ptr_type;
-
 	/**
 	 * Open or create an HDF5 file.  File access mode can be one
 	 * of the following values:
@@ -77,13 +75,22 @@ public:
 		_self = h5e::check_error(H5Gopen2(_file_id, "/", H5P_DEFAULT));
 	}
 
-	~file() {
-		if (H5Iget_type(_file_id)==H5I_FILE) {
-#ifdef H5_HAVE_PARALLEL
-                        H5Fflush(_file_id, H5F_SCOPE_GLOBAL);
-#endif
-			H5Fclose(_file_id);
-                }
+	~file() { close_file(); }
+
+	// a second identifier to carry, so the moves are written out rather
+	// than defaulted; the base takes care of _self, the root group
+	file(file && other) : h5g::group(std::move(other)), _file_id(other._file_id) {
+		other._file_id = H5I_INVALID_HID;
+	}
+
+	file & operator=(file && other) {
+		if (this != &other) {
+			close_file();
+			h5g::group::operator=(std::move(other));
+			_file_id = other._file_id;
+			other._file_id = H5I_INVALID_HID;
+		}
+		return *this;
 	}
 
 	void flush() {
@@ -101,25 +108,35 @@ public:
         /** name of the file, or an empty string if handl is invalid */
 	std::string name() const {
 		ssize_t sz = H5Fget_name(_file_id, 0, 0);
-                if (sz < 0) return "";
-		char name[sz+1];
-		H5Fget_name(_file_id, name, sz+1);
-		return name;
+		if (sz <= 0) return std::string();
+		std::vector<char> buf(sz + 1, '\0');
+		H5Fget_name(_file_id, buf.data(), buf.size());
+		return std::string(buf.data());
 	}
 
         /** the identifier for the file */
         hid_t file_id() const { return _file_id; }
 
 private:
+	void close_file() {
+		if (H5Iget_type(_file_id) == H5I_FILE) {
+#ifdef H5_HAVE_PARALLEL
+			H5Fflush(_file_id, H5F_SCOPE_GLOBAL);
+#endif
+			H5Fclose(_file_id);
+		}
+		_file_id = H5I_INVALID_HID;
+	}
+
 	hid_t _file_id;
 
 };
 
 }
 
-inline h5f::file::ptr_type
+inline h5f::file
 handle::file() const {
-	return boost::make_shared<h5f::file>(H5Iget_file_id(_self));
+	return h5f::file(H5Iget_file_id(_self));
 }
 
 }

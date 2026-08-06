@@ -221,7 +221,7 @@ TEST_CASE("an attribute reports its own name and shape") {
 
         attribute attr(node, "counts");
         CHECK(attr.name() == "counts");
-        CHECK(attr.dataspace()->size() == counts().size());
+        CHECK(attr.dataspace().size() == counts().size());
 }
 
 TEST_CASE("writing an attribute with the wrong length throws") {

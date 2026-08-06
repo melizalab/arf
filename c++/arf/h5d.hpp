@@ -24,8 +24,6 @@ namespace arf { namespace h5d {
 class dataset : public h5a::node {
 
 public:
-	typedef boost::shared_ptr<dataset> ptr_type;
-
 	/** Open an existing dataset */
 	dataset(hid_t parent, std::string const & name) {
 		if (H5Lexists(parent, name.c_str(), H5P_DEFAULT) <= 0)
@@ -51,11 +49,8 @@ public:
 		create_dataset(parent, name, dspace, type, chunkdims, compress);
 	}
 
-	~dataset() {
-                if (H5Iis_valid(_self) > 0) {
-                        H5Dclose(_self);
-                }
-	}
+	dataset(dataset && other) = default;
+	dataset & operator=(dataset && other) = default;
 
 	/** Write data to the current dataset. The extent of the dataset is resized to match. */
 	template <typename Type>
@@ -99,7 +94,7 @@ public:
 	void read(Type * data, hsize_t size, hsize_t offset=0, hsize_t stride=1) {
 		h5t::wrapper<Type> t;
 		h5t::datatype type(t);
-                h5s::dataspace filespace(*(dataspace()),
+                h5s::dataspace filespace(dataspace(),
                                          std::vector<hsize_t>(1,offset),
                                          std::vector<hsize_t>(1,stride),
                                          std::vector<hsize_t>(1,size));
@@ -120,7 +115,7 @@ public:
 
 	template <typename Type>
 	void read(std::vector<Type> & data) {
-                data.resize(dataspace()->size());
+                data.resize(dataspace().size());
                 if (data.empty()) return;
                 read(data.data(), data.size());
         }
@@ -132,20 +127,20 @@ public:
 	 * maxsize
 	 */
 	void set_extent(std::vector<hsize_t> const & size) {
-		assert(size.size() >= dataspace()->ndims());
+		assert(size.size() >= dataspace().ndims());
 		h5e::check_error(H5Dset_extent(_self, size.data()));
 	}
 
-	h5s::dataspace::ptr_type dataspace() const {
-		return boost::make_shared<h5s::dataspace>(h5e::check_error(H5Dget_space(_self)));
+	h5s::dataspace dataspace() const {
+		return h5s::dataspace(h5e::check_error(H5Dget_space(_self)));
 	}
 
-	h5t::datatype::ptr_type datatype() const {
-		return boost::make_shared<h5t::datatype>(h5e::check_error(H5Dget_type(_self)));
+	h5t::datatype datatype() const {
+		return h5t::datatype(h5e::check_error(H5Dget_type(_self)));
 	}
 
 	std::vector<hsize_t> chunks() const {
-		int ndims = dataspace()->ndims();
+		int ndims = dataspace().ndims();
 		hid_t plist = H5Dget_create_plist(_self);
 		std::vector<hsize_t> out(ndims);
 		h5e::check_error(H5Pget_chunk(plist, ndims, out.data()));

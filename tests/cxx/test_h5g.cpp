@@ -154,9 +154,9 @@ TEST_CASE("datasets are created under a group") {
         group entry(f, "entry", true);
 
         std::vector<double> data = arftest::ramp(512);
-        arf::dataset_ptr d = entry.create_dataset("pcm", data);
+        arf::h5d::dataset d = entry.create_dataset("pcm", data);
         CHECK(entry.contains("pcm"));
-        CHECK(d->dataspace()->size() == 512);
+        CHECK(d.dataspace().size() == 512);
 }
 
 TEST_CASE("creating a dataset over an existing name throws") {
@@ -166,7 +166,7 @@ TEST_CASE("creating a dataset over an existing name throws") {
         group entry(f, "entry", true);
 
         std::vector<double> data = arftest::ramp(8);
-        arf::dataset_ptr first = entry.create_dataset("pcm", data);
+        arf::h5d::dataset first = entry.create_dataset("pcm", data);
         CHECK_THROWS_AS(entry.create_dataset("pcm", data), arf::Exception);
 }
 

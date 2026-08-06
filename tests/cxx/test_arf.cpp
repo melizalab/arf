@@ -30,7 +30,7 @@ std::size_t
 attribute_count(arf::h5a::node & node, char const * name)
 {
         arf::h5a::attribute attr(node, name);
-        return attr.dataspace()->size();
+        return attr.dataspace().size();
 }
 
 }
@@ -169,10 +169,10 @@ TEST_CASE("datasets created through an entry carry units and datatype") {
         arf::entry e(f, "entry_000", 1, 0);
 
         std::vector<double> data = arftest::ramp(256);
-        arf::dataset_ptr d = e.create_dataset("pcm", data, "mV", arf::ACOUSTIC);
+        arf::h5d::dataset d = e.create_dataset("pcm", data, "mV", arf::ACOUSTIC);
 
-        CHECK(d->read_attribute<std::string>("units") == "mV");
-        CHECK(d->read_attribute<int>("datatype") == arf::ACOUSTIC);
+        CHECK(d.read_attribute<std::string>("units") == "mV");
+        CHECK(d.read_attribute<int>("datatype") == arf::ACOUSTIC);
 }
 
 TEST_CASE("replace drops an existing dataset") {
@@ -182,9 +182,9 @@ TEST_CASE("replace drops an existing dataset") {
         arf::entry e(f, "entry_000", 1, 0);
 
         e.create_dataset("pcm", arftest::ramp(256), "mV", arf::ACOUSTIC);
-        arf::dataset_ptr replaced =
+        arf::h5d::dataset replaced =
                 e.create_dataset("pcm", arftest::ramp(16), "mV", arf::ACOUSTIC, true);
-        CHECK(replaced->dataspace()->size() == 16);
+        CHECK(replaced.dataspace().size() == 16);
 }
 
 TEST_CASE("without replace, a second dataset of the same name throws") {
@@ -207,10 +207,10 @@ TEST_CASE("packet tables created through an entry carry units and datatype") {
         arf::file f(scratch.path, "w");
         arf::entry e(f, "entry_000", 1, 0);
 
-        arf::packet_table_ptr pt =
+        arf::h5pt::packet_table pt =
                 e.create_packet_table<float>("spikes", "s", arf::SPIKET);
-        CHECK(pt->read_attribute<std::string>("units") == "s");
-        CHECK(pt->read_attribute<int>("datatype") == arf::SPIKET);
+        CHECK(pt.read_attribute<std::string>("units") == "s");
+        CHECK(pt.read_attribute<int>("datatype") == arf::SPIKET);
 }
 
 TEST_CASE("entries are listed in creation order") {

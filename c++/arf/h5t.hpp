@@ -12,9 +12,9 @@
 #ifndef _H5T_H
 #define _H5T_H 1
 
-#include <boost/static_assert.hpp>
-#include <boost/integer_traits.hpp>
-#include <boost/type_traits/remove_cv.hpp>
+#include <algorithm>
+#include <limits>
+#include <type_traits>
 #include <boost/uuid/uuid.hpp>
 #include "hdf5.hpp"
 #include "h5e.hpp"
@@ -74,9 +74,11 @@ struct int_dtype_traits<64> {
 
 template <typename T>
 struct datatype_traits {
-	typedef typename boost::integer_traits<T> traits;
-	BOOST_STATIC_ASSERT((traits::is_integral));
-	static hid_t value() { return H5Tcopy(int_dtype_traits<traits::digits>::value()); }
+	static_assert(std::numeric_limits<T>::is_integer,
+		      "no datatype_traits specialization for this type");
+	static hid_t value() {
+		return H5Tcopy(int_dtype_traits<std::numeric_limits<T>::digits>::value());
+	}
 };
 
 /**
@@ -158,40 +160,40 @@ class wrapper {};
  */
 class datatype : public handle {
 public:
-	typedef boost::shared_ptr<datatype> ptr_type;
-
 	/** Create a datatype from a C type */
 	template <typename Type>
-	explicit datatype(wrapper<Type>) {
-		_self = h5e::check_error(detail::datatype_traits<typename boost::remove_cv<Type>::type>::value());
-	}
-
-	datatype(datatype const & other) {
-		_self = h5e::check_error(H5Tcopy(other.hid()));
-	}
+	explicit datatype(wrapper<Type>)
+		: handle(h5e::check_error(
+				 detail::datatype_traits<typename std::remove_cv<Type>::type>::value())) {}
 
 	/**
 	 * Take ownership of a datatype handle, as h5s::dataspace does. Callers
-	 * holding a borrowed handle must H5Tcopy it themselves. This used to
-	 * copy, which left the caller's handle unowned and leaking at every
-	 * call site -- all of which pass a freshly returned handle.
+	 * holding a borrowed handle must H5Tcopy it themselves.
 	 */
 	explicit datatype(hid_t dtype_id) : handle(h5e::check_error(dtype_id)) {}
 
-	datatype & operator= (datatype const & other) {
-		// release old handle
-		H5Tclose(_self);
-		_self = h5e::check_error(H5Tcopy(other.hid()));
+	/** Copying duplicates the description with H5Tcopy. */
+	datatype(datatype const & other)
+		: handle(h5e::check_error(H5Tcopy(other.hid()))) {}
+
+	datatype(datatype && other) = default;
+
+	/**
+	 * Copy-and-swap: one operator serves copy and move assignment, and
+	 * self-assignment is safe. Assigning used to close _self and then copy
+	 * from other, so `a = a` copied from the handle it had just closed.
+	 */
+	datatype & operator= (datatype other) {
+		swap(other);
 		return *this;
 	}
 
-	~datatype() {
-		H5Tclose(_self);
-	}
+	void swap(datatype & other) { std::swap(_self, other._self); }
 
-	// NB: check the htri_t that H5Tequal returns, then compare. Passing the
-	// comparison's result in instead routes an ordinary "these differ"
-	// answer through the error path, where false means failure.
+	hsize_t size() const { return H5Tget_size(_self); }
+
+	void set_size(hsize_t size) { h5e::check_error(H5Tset_size(_self, size)); }
+
 	bool operator==(datatype const & other) const {
 		return h5e::check_error(H5Tequal(_self, other.hid())) > 0;
 	}
@@ -199,9 +201,6 @@ public:
 		return h5e::check_error(H5Tequal(_self, other.hid())) <= 0;
 	}
 
-	hsize_t size() const { return H5Tget_size(_self); }
-
-	void set_size(hsize_t size) { h5e::check_error(H5Tset_size(_self, size)); }
 };
 
 

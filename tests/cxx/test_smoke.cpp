@@ -71,13 +71,13 @@ TEST_CASE("a dataset round trips through an entry") {
         // NB: no explicit template argument. create_dataset<double>(...) is
         // ambiguous when the storage and memory types coincide -- see the
         // phase 5 backlog in CLAUDE.md.
-        arf::dataset_ptr d = e.create_dataset("pcm", written, "mV", arf::ACOUSTIC);
-        d->write_attribute("sampling_rate", 20000);
+        arf::h5d::dataset d = e.create_dataset("pcm", written, "mV", arf::ACOUSTIC);
+        d.write_attribute("sampling_rate", 20000);
 
         // NB: reads through the dataset, not through e.read_dataset(name, vec),
         // which is broken -- see the phase 5 backlog in CLAUDE.md.
         std::vector<double> read;
-        d->read(read);
+        d.read(read);
         REQUIRE(read.size() == written.size());
         CHECK(read == written);
 }

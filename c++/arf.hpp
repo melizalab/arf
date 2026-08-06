@@ -66,8 +66,6 @@ namespace arf {
  */
 class entry : public h5g::group {
 public:
-        typedef boost::shared_ptr<entry> ptr_type;
-
         /** Open an existing entry object */
         entry(h5a::node const & parent, std::string const & name)
                 : h5g::group(parent, name), _uuid() {
@@ -87,7 +85,7 @@ public:
               std::vector<Type> const & timestamp)
                 : h5g::group(parent, name, true),
                   _uuid(boost::uuids::random_generator()()) {
-                write_attribute<boost::int64_t, Type>("timestamp", timestamp);
+                write_attribute<std::int64_t, Type>("timestamp", timestamp);
                 // to_string gives 36 characters, and string attributes are
                 // sized to exactly their content, so this is the 36-byte
                 // H5T_STRING the specification asks for
@@ -95,10 +93,10 @@ public:
         }
 
         entry(h5a::node const & parent, std::string const & name,
-              boost::int64_t tv_sec, boost::int64_t tv_usec=0)
+              std::int64_t tv_sec, std::int64_t tv_usec=0)
                 : h5g::group(parent, name, true),
                   _uuid(boost::uuids::random_generator()()) {
-                boost::int64_t ts[2] = { tv_sec, tv_usec };
+                std::int64_t ts[2] = { tv_sec, tv_usec };
                 write_attribute("timestamp", ts, 2);
                 // to_string gives 36 characters, and string attributes are
                 // sized to exactly their content, so this is the 36-byte
@@ -119,8 +117,8 @@ public:
          * @param compression deflate level; see h5g::group::create_dataset (zlib).
          * Default is 0 which provides some integrity protection, use -1 for no filtering.
          */
-        template <typename StorageType, typename MemType>
-        h5d::dataset::ptr_type
+        template <typename StorageType = void, typename MemType>
+        h5d::dataset
         create_dataset(std::string const & name,
                        std::vector<MemType> const & data,
                        std::string const & units,
@@ -130,21 +128,11 @@ public:
                 if (contains(name) && replace)
                         unlink(name);
 
-                h5d::dataset::ptr_type ds = h5g::group::create_dataset(name, data, compression);
-                ds->write_attribute("datatype",static_cast<int>(datatype));
-                ds->write_attribute("units",units);
+                h5d::dataset ds =
+                        h5g::group::create_dataset<StorageType>(name, data, compression);
+                ds.write_attribute("datatype",static_cast<int>(datatype));
+                ds.write_attribute("units",units);
                 return ds;
-        }
-
-        template <typename Type>
-        h5d::dataset::ptr_type
-        create_dataset(std::string const & name,
-                       std::vector<Type> const & data,
-                       std::string const & units,
-                       DataType datatype,
-                       bool replace=false,
-                       int compression=0) {
-                return create_dataset<Type,Type>(name,data,units,datatype,replace,compression);
         }
 
         /**
@@ -161,17 +149,17 @@ public:
          * Default is 0 which provides some integrity protection, use -1 for no filtering.
          */
         template <typename StorageType>
-        typename h5pt::packet_table::ptr_type
+        h5pt::packet_table
         create_packet_table(std::string const & name,
                             std::string const & units,
                             DataType datatype,
                             bool replace=false,
                             hsize_t chunk_size=1024,
                             int compression=0) {
-                h5pt::packet_table::ptr_type pt =
+                h5pt::packet_table pt =
                         h5g::group::create_packet_table<StorageType>(name, replace, chunk_size, compression);
-                pt->write_attribute("datatype",static_cast<int>(datatype));
-                pt->write_attribute("units",units);
+                pt.write_attribute("datatype",static_cast<int>(datatype));
+                pt.write_attribute("units",units);
                 return pt;
         }
 
@@ -182,17 +170,17 @@ public:
          * @param units one element per field of StorageType, in field order
          */
         template <typename StorageType>
-        typename h5pt::packet_table::ptr_type
+        h5pt::packet_table
         create_packet_table(std::string const & name,
                             std::vector<std::string> const & units,
                             DataType datatype,
                             bool replace=false,
                             hsize_t chunk_size=1024,
                             int compression=0) {
-                h5pt::packet_table::ptr_type pt =
+                h5pt::packet_table pt =
                         h5g::group::create_packet_table<StorageType>(name, replace, chunk_size, compression);
-                pt->write_attribute("datatype",static_cast<int>(datatype));
-                pt->write_attribute("units",units);
+                pt.write_attribute("datatype",static_cast<int>(datatype));
+                pt.write_attribute("units",units);
                 return pt;
         }
 
@@ -211,8 +199,6 @@ private:
 class file : public h5f::file {
 
 public:
-        typedef boost::shared_ptr<file> ptr_type;
-
         /**
          * Open or create an ARF file.  File access mode can be one
          * of the following values:
