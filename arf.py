@@ -306,18 +306,22 @@ def select_interval(dset: h5.Dataset, begin: float, end: float):
     # Keying on the presence of sampling_rate instead would be wrong: the spec
     # permits a real-valued point process to carry one, and rescaling those
     # reinterprets a window of [0, 1) seconds as [0, 1000) samples.
-    if _sample_timebase(dset):
+    if _is_sample_timebase(dset):
         Fs = dset.attrs["sampling_rate"]
         begin = int(begin * Fs)
         end = int(end * Fs)
 
     if is_marked_pointproc(dset):
-        t = dset["start"]
-        idx = (t >= begin) & (t < end)
+        start = dset["start"]
+        idx = (start >= begin) & (start < end)
         data = dset[idx]
         # NB: cast to the field's own type. begin is only an integer when the
         # window was rescaled, and subtracting a float in place from an integer
         # field raises rather than converting.
+        if start.dtype.kind in "iu" and begin != int(begin):
+            raise ValueError("Cannot rebase integer start times by a fractional offset; "
+                             "dataset units say seconds but the 'start' field is integral."
+                             )
         data["start"] -= data.dtype["start"].type(begin)
     elif is_time_series(dset):
         data = dset[slice(begin, end)]
@@ -593,11 +597,14 @@ def _decode_attribute(value):
     return value
 
 
-def _sample_timebase(dset: h5.Dataset) -> bool:
+def _is_sample_timebase(dset: h5.Dataset) -> bool:
     """Return True if the times in dset are counted in samples rather than seconds.
 
-    Sampled data is indexed by sample by construction. Event data says so in
-    its units, which for a compound dataset is the entry for the 'start' field.
+    Sampled data is always indexed by sample. Event data will say so in its
+    `units` attribute. For a compound dataset, this is supposed to be an array,
+    one entry per field in the table, with the entry for `start` determinining
+    the timebase. Some non-conforming writers only provide a scalar `units`
+    attribute, which we interpret as the units of the timebase.
 
     """
     if "sampling_rate" not in dset.attrs:

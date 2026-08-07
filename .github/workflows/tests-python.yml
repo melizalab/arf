@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - "maint/*"
 
 jobs:
   build:

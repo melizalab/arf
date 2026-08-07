@@ -277,10 +277,6 @@ def test_timestamp_conversion():
         arf.convert_timestamp("blah blah")
 
 
-# # Variables:
-# # End:
-
-
 def test_units_stored_as_bytes(tmp_entry):
     """Fixed-length string attributes come back from h5py as bytes.
 
@@ -353,6 +349,10 @@ def test_select_interval_respects_units_not_sampling_rate(tmp_entry):
 
     Rescaling whenever the attribute is present turns a one-second window over
     times in seconds into the first thousand seconds.
+
+    Another situation to handle is when a non-conforming writer (older versions
+    of jrecord) provide a scalar "units" attr for a compound datatype.
+
     """
     times = np.array([0.5, 5.0, 900.0])
     seconds = arf.create_dataset(
@@ -379,6 +379,27 @@ def test_select_interval_respects_units_not_sampling_rate(tmp_entry):
     data, offset = arf.select_interval(samples, 0.0, 1.0)
     assert list(data) == [500]
     assert offset == 0
+
+    compound = arf.create_dataset(
+        tmp_entry,
+        "compound",
+        np.rec.fromrecords(
+            [(200, 1, b"stimulus"), (168505, 0, b"stimulus")],
+            names=("start", "status", "message"),
+        ),
+        sampling_rate=1000,
+        datatype=arf.DataTypes.EVENT,
+        units=(b"samples", b"", b"")
+    )
+    data, offset = arf.select_interval(compound, 0.1, 1.0)
+    assert data.tolist() == [(100, 1, b"stimulus")]
+    assert offset == 100
+    # now make the units non-conforming
+    compound.attrs["units"] = b"samples"
+    data, offset = arf.select_interval(compound, 0.1, 1.0)
+    assert data.tolist() == [(100, 1, b"stimulus")]
+    assert offset == 100
+
 
 
 def test_select_interval_on_a_time_series(tmp_entry):
