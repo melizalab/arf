@@ -382,21 +382,21 @@ def test_select_interval_respects_units_not_sampling_rate(tmp_entry):
         tmp_entry,
         "compound",
         np.rec.fromrecords(
-            [(0, 1, b"stimulus"), (168505, 0, b"stimulus")],
+            [(200, 1, b"stimulus"), (168505, 0, b"stimulus")],
             names=("start", "status", "message"),
         ),
         sampling_rate=1000,
         datatype=arf.DataTypes.EVENT,
         units=(b"samples", b"", b"")
     )
-    data, offset = arf.select_interval(compound, 0.0, 1.0)
-    assert data.tolist() == [(0, 1, b"stimulus")]
-    assert offset == 0
+    data, offset = arf.select_interval(compound, 0.1, 1.0)
+    assert data.tolist() == [(100, 1, b"stimulus")]
+    assert offset == 100
     # now make the units non-conforming
     compound.attrs["units"] = b"samples"
-    data, offset = arf.select_interval(compound, 0.0, 1.0)
-    assert data.tolist() == [(0, 1, b"stimulus")]
-    assert offset == 0
+    data, offset = arf.select_interval(compound, 0.1, 1.0)
+    assert data.tolist() == [(100, 1, b"stimulus")]
+    assert offset == 100
 
 
 

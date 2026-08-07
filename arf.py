@@ -267,10 +267,14 @@ def select_interval(dset: h5.Dataset, begin: float, end: float):
         end = int(end * Fs)
 
     if is_marked_pointproc(dset):
-        t = dset["start"]
-        idx = (t >= begin) & (t < end)
+        start = dset["start"]
+        idx = (start >= begin) & (start < end)
         data = dset[idx]
-        data["start"] -= begin
+        if start.dtype.kind in "iu" and begin != int(begin):
+            raise ValueError("Cannot rebase integer start times by a fractional offset; "
+                             "dataset units say seconds but the 'start' field is integral."
+                             )
+        data["start"] -= type(start.dtype.type())(begin)
     elif is_time_series(dset):
         data = dset[slice(begin, end)]
     else:
