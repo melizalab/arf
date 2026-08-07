@@ -275,17 +275,13 @@ def test_timestamp_conversion():
         arf.convert_timestamp("blah blah")
 
 
-# # Variables:
-# # End:
-
-
 def test_units_stored_as_bytes(tmp_entry):
     """Fixed-length string attributes come back from h5py as bytes.
 
     That is what the C++ library writes, so classification has to cope with it.
     A discrete-timebase point process carries units of "samples" and a
-    sampling_rate, which is exactly the combination that used to be misread as
-    sampled data.
+    sampling_rate, which used to be misread as sampled data.
+
     """
     dset = arf.create_dataset(
         tmp_entry,
@@ -351,6 +347,10 @@ def test_select_interval_respects_units_not_sampling_rate(tmp_entry):
     The window used to be rescaled whenever the attribute was present, so a
     one-second window over times in seconds selected the first thousand
     seconds instead.
+
+    Another situation to handle is when a non-conforming writer (older versions
+    of jrecord) provide a scalar "units" attr for a compound datatype.
+
     """
     times = np.array([0.5, 5.0, 900.0])
     seconds = arf.create_dataset(
@@ -377,6 +377,27 @@ def test_select_interval_respects_units_not_sampling_rate(tmp_entry):
     data, offset = arf.select_interval(samples, 0.0, 1.0)
     assert list(data) == [500]
     assert offset == 0
+
+    compound = arf.create_dataset(
+        tmp_entry,
+        "compound",
+        np.rec.fromrecords(
+            [(0, 1, b"stimulus"), (168505, 0, b"stimulus")],
+            names=("start", "status", "message"),
+        ),
+        sampling_rate=1000,
+        datatype=arf.DataTypes.EVENT,
+        units=(b"samples", b"", b"")
+    )
+    data, offset = arf.select_interval(compound, 0.0, 1.0)
+    assert data.tolist() == [(0, 1, b"stimulus")]
+    assert offset == 0
+    # now make the units non-conforming
+    compound.attrs["units"] = b"samples"
+    data, offset = arf.select_interval(compound, 0.0, 1.0)
+    assert data.tolist() == [(0, 1, b"stimulus")]
+    assert offset == 0
+
 
 
 def test_select_interval_on_a_time_series(tmp_entry):
@@ -427,3 +448,4 @@ def test_check_file_version_reports_bad_versions(tmp_file):
     tmp_file.attrs["arf_version"] = "not-a-version"
     with pytest.raises(UserWarning, match="Unparseable"):
         arf.check_file_version(tmp_file)
+
