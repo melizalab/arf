@@ -33,13 +33,16 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Natural Language :: English",
 ]
+# Floors are the oldest release that ships a wheel for the interpreter, on
+# every platform tested: manylinux and musllinux (the dev sandbox is Alpine),
+# macOS arm64, and win_amd64. Below these, pip and uv fall back to building
+# from source, which for numpy and h5py means a compiler, HDF5 headers, and
+# several minutes per job. Markers are mutually exclusive so only one applies.
 dependencies = [
-    "h5py>=3.12.1; python_version >= '3.11'",
-    "h5py>=3.15.1; python_version >= '3.13'",
-    "numpy>=1.24.0; python_version == '3.11'",
-    "numpy>=1.26.0; python_version == '3.12'",
-    "numpy>=2.2.1; python_version >= '3.13'",
-    "numpy>=2.2.1; python_version >= '3.14'",
+    "h5py>=3.15.0",
+    "numpy>=1.26.2; python_version < '3.13'",
+    "numpy>=2.1.0; python_version == '3.13'",
+    "numpy>=2.3.2; python_version >= '3.14'",
     "packaging>=24.0",
 ]
 

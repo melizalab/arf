@@ -11,7 +11,7 @@ from datetime import datetime
 from enum import IntEnum
 from pathlib import Path
 from time import mktime, struct_time
-from typing import Iterator, List, Optional, Tuple, Union
+from typing import Iterator, List, Optional, Sequence, Tuple, Union
 from uuid import UUID
 
 import h5py as h5
@@ -27,6 +27,7 @@ except ImportError:
 Timestamp = Union[datetime, struct_time, int, float, Tuple[int, int]]
 ArfTimeStamp = np.ndarray
 Datashape = Tuple[int, ...]
+Units = Union[str, bytes, Sequence[str], Sequence[bytes], np.ndarray]
 
 spec_version = "2.2"
 __version__ = "3.0.0"
@@ -191,7 +192,7 @@ def create_dataset(
     group: h5.Group,
     name: str,
     data: npt.ArrayLike,
-    units: str = "",
+    units: Units = "",
     datatype=DataTypes.UNDEFINED,
     chunks: Union[bool, Datashape] = True,
     maxshape: Optional[Datashape] = None,
@@ -241,11 +242,18 @@ def create_dataset(
     if values.dtype.kind == "V":  # ty: ignore[unresolved-attribute]
         if "start" not in values.dtype.names:  # ty: ignore[unresolved-attribute]
             raise ValueError("complex event data requires 'start' field")
-        if not isinstance(units, (list, tuple)):
+        if not _is_sequence(units):
             raise ValueError("complex event data requires sequence of units")
         if not len(units) == len(values.dtype.names):  # ty: ignore[unresolved-attribute]
             raise ValueError("number of units doesn't match number of fields")
-    if units == "":
+        units = _normalize_units(units)
+    elif _is_sequence(units):
+        # only a compound dataset takes one unit per field. Rejecting this here
+        # also keeps a sequence away from the comparisons below, which compare
+        # elementwise: a list yields False and the branch is quietly dead, but
+        # the ndarray h5py returns yields an array, and `if` on that raises.
+        raise ValueError("only complex event data takes a sequence of units")
+    elif units == "":
         if srate is None or not srate > 0:
             raise ValueError(
                 "unitless data assumed time series and requires sampling_rate attribute"
@@ -595,6 +603,38 @@ def _decode_attribute(value):
     if isinstance(value, bytes):
         return value.decode("utf-8", "replace")
     return value
+
+
+def _is_sequence(value) -> bool:
+    """Return True if value is a sequence of units rather than a single one.
+
+    Deliberately structural rather than a list/tuple isinstance check: h5py
+    returns this attribute as an ndarray, so requiring a list would mean a
+    dataset read from one file could not be written to another without
+    converting first. Strings are excluded because they are stored as scalars,
+    which is exactly the distinction being drawn.
+
+    """
+    if isinstance(value, (str, bytes)):
+        return False
+    return hasattr(value, "__len__") and hasattr(value, "__getitem__")
+
+
+def _normalize_units(units):
+    """Convert a units sequence into a form h5py will store.
+
+    h5py takes lists, tuples, object arrays and fixed-width bytes arrays -- the
+    latter two being what it hands back for this library's and the C++
+    library's writes, so a round trip needs no conversion. It refuses numpy's
+    unicode dtype, which is what `np.array(["s", "mV"])` produces, with "No
+    conversion path for dtype". Converting is better than letting that surface
+    from inside h5py; the result is stored identically to the tuple form.
+
+    """
+    dtype = getattr(units, "dtype", None)
+    if dtype is not None and dtype.kind == "U":
+        return [str(u) for u in units]
+    return units
 
 
 def _is_sample_timebase(dset: h5.Dataset) -> bool:

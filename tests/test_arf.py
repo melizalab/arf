@@ -324,6 +324,60 @@ def test_string_data_is_rejected_with_a_useful_error(tmp_entry):
         arf.create_dataset(tmp_entry, "object", np.array([object()]), units="s")
 
 
+def test_compound_units_accepts_any_sequence(tmp_entry):
+    """h5py returns the units attribute as an ndarray.
+
+    Requiring a list or tuple meant a compound dataset read from one file could
+    not be written to another without converting the attribute by hand -- which
+    covers both writers, since this library's units come back as an object
+    array and the C++ library's as a fixed-width bytes array.
+    """
+    dtype = np.dtype([("start", "f8"), ("peak", "f8")])
+    data = np.zeros(4, dtype=dtype)
+    units = ("s", "mV")
+
+    for name, value in (
+        ("tuple", units),
+        ("list", list(units)),
+        # what h5py hands back for this library's writes
+        ("ndarray-object", np.array(units, dtype=object)),
+        # and for the C++ library's, which stores fixed-width strings
+        ("ndarray-bytes", np.array([u.encode() for u in units], dtype="|S4")),
+        # h5py refuses this dtype, so create_dataset converts it
+        ("ndarray-unicode", np.array(units)),
+    ):
+        dset = arf.create_dataset(tmp_entry, name, data, units=value)
+        assert len(dset.attrs["units"]) == 2
+        assert [arf._decode_attribute(u) for u in dset.attrs["units"]] == list(units)
+
+    # the round trip that motivated it: read the attribute back off a dataset
+    # and hand it straight to create_dataset, with nothing in between
+    for source_name in ("tuple", "ndarray-bytes"):
+        source = tmp_entry[source_name]
+        copy = arf.create_dataset(
+            tmp_entry, f"copy-of-{source_name}", source[:], units=source.attrs["units"]
+        )
+        assert [arf._decode_attribute(u) for u in copy.attrs["units"]] == list(units)
+
+    # a bare string is still a scalar, not a sequence of one
+    with pytest.raises(ValueError, match="requires sequence of units"):
+        arf.create_dataset(tmp_entry, "scalar", data, units="s")
+    with pytest.raises(ValueError, match="number of units"):
+        arf.create_dataset(tmp_entry, "short", data, units=np.array(["s"]))
+
+    # and the converse: a sequence on data that is not compound. This is
+    # non-conforming, and the comparisons downstream would otherwise raise
+    # numpy's "truth value of an array is ambiguous" instead.
+    with pytest.raises(ValueError, match="only complex event data"):
+        arf.create_dataset(
+            tmp_entry,
+            "sampled",
+            np.zeros(4, dtype="f8"),
+            units=np.array(["mV"], dtype=object),
+            sampling_rate=1000,
+        )
+
+
 def test_select_interval_on_an_empty_dataset(tmp_entry):
     """The guard tested idx.size, which is the length of the mask.
 
