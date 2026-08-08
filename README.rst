@@ -64,7 +64,7 @@ installation
 
 ARF files require HDF5>=1.8 (http://www.hdfgroup.org/HDF5).
 
-The python interface requires Python 3.11 or greater and h5py>=3.11. The last
+The python interface requires Python 3.11 or greater and h5py>=3.15. The last
 version of this package to support Python 2 was ``2.5.1``. The last version to
 support h5py 2 was ``2.6.7``.
 
